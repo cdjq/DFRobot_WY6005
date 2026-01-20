@@ -195,7 +195,7 @@ int DFRobot_WY6005::triggerGetRaw(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, i
         if (frameIndex == totalFrameSize) {
           // Parse all points
           for (int i = 0; i < points; i++) {
-            int pIdx = HEADER_SIZE + i * POINT_DATA_SIZE;
+            int pIdx = headerSize + i * pointDataSize;
             uint8_t* pData = &frameBuffer[pIdx];    
             parsePointData(pData, &xBuf[i], &yBuf[i], &zBuf[i], &iBuf[i]);
           }
