@@ -22,7 +22,30 @@ DFRobot_WY6005::DFRobot_WY6005(HardwareSerial &serial, uint32_t config, int8_t r
 }
 
 void DFRobot_WY6005::begin(uint32_t baudRate) {
+  // HardwareSerial::begin has different signatures on different cores:
+  // - ESP32: begin(baud, config, rxPin, txPin)
+  // - AVR/Arduino UNO: begin(baud) or begin(baud, config)
+  // Use conditional compilation to call the correct overload.
+#if defined(ESP32)
   _serial->begin(baudRate, _config, _rxPin, _txPin);
+#elif defined(ARDUINO_ARCH_ESP8266)
+  // ESP8266 HardwareSerial doesn't support rx/tx pin remap in begin
+  _serial->begin(baudRate, _config);
+#elif defined(ARDUINO_ARCH_AVR)
+  // AVR (UNO, etc.) only supports begin(baud) or begin(baud, config)
+  #if defined(SERIAL_8N1)
+    _serial->begin(baudRate, _config);
+  #else
+    _serial->begin(baudRate);
+  #endif
+#else
+  // Fallback: try two-arg form first, otherwise single arg.
+  #if defined(HAVE_HWSERIAL1) || defined(SERIAL_8N1)
+    _serial->begin(baudRate, _config);
+  #else
+    _serial->begin(baudRate);
+  #endif
+#endif
   delay(100);
   DBG("Serial port started with baud rate: %lu", baudRate);
 }
@@ -145,10 +168,10 @@ void DFRobot_WY6005::parsePointData(const uint8_t* pointData, int16_t* x, int16_
 int DFRobot_WY6005::triggerGetRaw(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, int16_t* iBuf, int maxPoints, uint32_t timeoutMs) {
   // Decide how many points to read: prefer configured _totalPoints if set, otherwise use maxPoints
   int points = _totalPoints;
-  const int HEADER_SIZE = WY6005_FRAME_HEADER_SIZE;
-  const int POINT_DATA_SIZE = WY6005_POINT_DATA_SIZE;
-  int expectedDataLen = points * POINT_DATA_SIZE;
-  int totalFrameSize = HEADER_SIZE + expectedDataLen;
+  const int headerSize = WY6005_FRAME_HEADER_SIZE;
+  const int pointDataSize = WY6005_POINT_DATA_SIZE;
+  int expectedDataLen = points * pointDataSize;
+  int totalFrameSize = headerSize + expectedDataLen;
 
   uint8_t frameBuffer[600]; 
   

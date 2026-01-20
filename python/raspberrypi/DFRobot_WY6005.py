@@ -1,155 +1,189 @@
 # -*- coding: utf-8 -*-
-'''
-@file DFRobot_FRN20.py
-@brief Define the basic structure and methods of the DFRobot_FRN20 class.
-@copyright   Copyright (c) 2025 DFRobot Co.Ltd (http://www.dfrobot.com)
-@license     The MIT license (MIT)
-@author [fary](feng.yang@dfrobot.com)
-@version  V1.0
-@date  2025-12-15
-@https://github.com/DFRobot/DFRobot_FRN20
-'''
+"""
+@file DFRobot_WY6005.py
+@brief Python driver for the DFRobot WY6005 64x8 dToF sensor (UART).
+@copyright  Copyright (c) 2025 DFRobot Co.Ltd
+@license    The MIT license (MIT)
+@author     [fary](feng.yang@dfrobot.com)
+@version    V1.0
+@date       2025-12-15
+@url        https://github.com/DFRobot/DFRobot_WY6005
+"""
 
-from smbus2 import SMBus, i2c_msg
-from ctypes import Structure, c_uint16, c_ubyte
+import struct
+import time
+from typing import List, Optional, Tuple
+import serial
 
 
-class DFRobot_FRN20:
-  FRN20_IIC_ADDRESS = 0x40
-  FRN20_COMMAND_READ_FLOW = 0x1000
-  FRN20_COMMAND_READ_PARAMS = 0xCCDD
-  FRN20_PARAM_FRAME_LEN = 41
-  FRN20_FLOW_FRAME_LEN = 5
-  FRN20_CRC_INITIAL_VALUE = 0x00
-  FRN20_CRC_POLYNOMIAL = 0x131
+class DFRobot_WY6005:
+  WY6005_SYNC_BYTES = bytes([0x0A, 0x4F, 0x4B, 0x0A])
+  WY6005_FRAME_HEADER_SIZE = 4
+  WY6005_POINT_DATA_SIZE = 8
+  WY6005_MAX_POINTS = 64 * 8  # 64 points per line, 8 lines
 
-  # Using ctypes to define Params structure
-  class DFRobot_Params(Structure):
-    _fields_ = [
-      ('unit', c_uint16),  # Unit (0x15 mL/min, 0x16 L/min, etc.)
-      ('range', c_uint16),  # Range
-      ('offset', c_uint16),  # Offset
-      ('medium_coeff', c_uint16),  # Conversion coefficient
-      ('vout_min_mv', c_uint16),  # Output voltage lower limit (mV)
-      ('vout_max_mv', c_uint16),  # Output voltage upper limit (mV)
-      ('product_id', c_ubyte * 5),  # Product ID (5-byte ASCII, including terminator)
-      ('crc', c_ubyte),  # CRC check
-    ]
+  def __init__(self, port: str, baudrate: int = 921600, timeout: float = 0.5):
+    """
+    @brief Initialize sensor over UART.
+    @param port UART device path, e.g. '/dev/ttyUSB0'.
+    @param baudrate Baudrate, default 921600.
+    @param timeout Read timeout in seconds.
+    """
+    self.ser = serial.Serial(port=port, baudrate=baudrate, timeout=timeout)
+    self.total_points = self.WY6005_MAX_POINTS
 
-  def __init__(self, bus=1, addr=0x40):
-    '''
-    @fn __init__
-    @brief Initialize the DFRobot_FRN20 class
-    @param bus: I2C bus number
-    @param addr: I2C address
-    @return None
-    '''
-    self.bus = SMBus(bus)
-    self.addr = addr
-    self.params = self.DFRobot_Params()  # Initialize Params structure instance
-    self.raw_flow_data = 0  # Raw flow data
-    self.mass_flow_data = 0.0  # Mass flow data
+  def close(self):
+    if self.ser and self.ser.is_open:
+      self.ser.close()
 
-  def _write_command(self, command):
-    '''
-    @fn _write_command
-    @brief Write command to the sensor
-    @param command: Sensor control command
-    @return None
-    '''
-    write = i2c_msg.write(self.addr, [(command >> 8) & 0xFF, command & 0xFF])
-    self.bus.i2c_rdwr(write)
+  def _send_command(self, command: str) -> bool:
+    cmd = (command + "\n").encode("ascii")
+    self.ser.write(cmd)
+    return True
 
-  def _read_bytes(self, length):
-    '''
-    @fn _read_bytes
-    @brief Read data from the sensor
-    @param length: Length of data to be read
-    @return Data read from the sensor
-    '''
-    read = i2c_msg.read(self.addr, length)
-    self.bus.i2c_rdwr(read)
-    return list(read)
+  def set_stream_control(self, enable: bool) -> bool:
+    return self._send_command(f"AT+STREAM_CONTROL={'1' if enable else '0'}")
 
-  def _calc_crc(self, data):
-    '''
-    @fn _calc_crc
-    @brief CRC check
-    @param data: Data to be verified
-    @return CRC check result
-    '''
-    crc = self.FRN20_CRC_INITIAL_VALUE
-    for byte in data:
-      crc ^= byte
-      for _ in range(8, 0, -1):  # Use underscore for unused variable
-        if crc & 0x80:
-          crc = (crc << 1) ^ self.FRN20_CRC_POLYNOMIAL
-        else:
-          crc = crc << 1
-        crc &= 0xFF  # Ensure CRC is always 8 bits
-    return crc
+  def set_frame_mode(self, continuous: bool) -> bool:
+    return self._send_command(f"AT+SPAD_FRAME_MODE={'1' if continuous else '0'}")
 
-  def begin(self):
-    try:
-      self._write_command(self.FRN20_IIC_ADDRESS)
-      return 1
-    except OSError as err:  # Use more descriptive variable name
-      print("Init error: {}".format(err))
-      return -1
+  def set_output_line_data(self, line: int, start_point: int, point_count: int) -> bool:
+    return self._send_command(f"AT+SPAD_OUTPUT_LINE_DATA={line},{start_point},{point_count}")
 
-  def read_params(self):
-    '''
-    @fn read_params
-    @brief Read parameters from the sensor
-    @return int
-    @retval 1: Success
-    @retval 0: Failed
-    '''
-    self._write_command(self.FRN20_COMMAND_READ_PARAMS)
-    data = self._read_bytes(self.FRN20_PARAM_FRAME_LEN)
-    if self._calc_crc(data[:-1]) == data[-1]:
-      # Assign values using ctypes structure
-      self.params.unit = (data[4] << 8) | data[5]
-      self.params.range = (data[6] << 8) | data[7]
-      self.params.offset = (data[8] << 8) | data[9]
-      self.params.medium_coeff = (data[10] << 8) | data[11]
-      self.params.vout_min_mv = (data[16] << 24) | (data[17] << 16) | (data[18] << 8) | data[19]
-      self.params.vout_max_mv = (data[20] << 24) | (data[21] << 16) | (data[22] << 8) | data[23]
+  def trigger_one_frame(self) -> bool:
+    return self._send_command("AT+SPAD_TRIG_ONE_FRAME=1")
 
-      # Process product_id (5 bytes)
-      for i in range(4):
-        self.params.product_id[i] = data[29 + i]
-      self.params.product_id[4] = 0  # Add terminator
+  def save_config(self) -> bool:
+    return self._send_command("AT+SAVE_CONFIG")
 
-      self.params.crc = data[40]
-      return 1
-    return 0
+  def config_single_point_mode(self, line: int, point: int) -> bool:
+    if line < 1 or line > 8:
+      return False
+    if point < 0 or point > 64:
+      return False
+    if not self.set_stream_control(False):
+      return False
+    time.sleep(0.7)
+    if not self.set_output_line_data(line, point, point):
+      return False
+    time.sleep(0.7)
+    self.save_config()
+    time.sleep(0.7)
+    self.total_points = 1
+    return self.set_stream_control(True)
 
-  def read_raw_flow_data(self):
-    '''
-    @fn read_raw_flow_data
-    @brief Read raw flow data from the sensor
-    @return int
-    @retval 1: Success
-    @retval 0: Failed
-    '''
-    self._write_command(self.FRN20_COMMAND_READ_FLOW)
-    data = self._read_bytes(self.FRN20_FLOW_FRAME_LEN)
-    if self._calc_crc(data[:-1]) == data[-1]:
-      self.raw_flow_data = (data[0] << 8) | data[1]
-      return 1
-    return 0
+  def config_single_line_mode(self, line: int, start_point: int, end_point: int) -> bool:
+    if line < 1 or line > 8:
+      return False
+    if start_point < 0 or start_point > 64 or end_point < 0 or end_point > 64:
+      return False
+    if start_point > end_point:
+      return False
+    if not self.set_stream_control(False):
+      return False
+    time.sleep(0.7)
+    if not self.set_output_line_data(line, start_point, end_point):
+      return False
+    time.sleep(0.7)
+    self.save_config()
+    time.sleep(0.7)
+    self.total_points = end_point - start_point + 1
+    return self.set_stream_control(True)
 
-  def read_mass_flow_data(self):
-    '''
-    @fn read_mass_flow_data
-    @brief Read mass flow data from the sensor
-    @return int
-    @retval 1: Success
-    @retval 0: Failed
-    '''
-    if self.read_raw_flow_data():
-      delta = self.raw_flow_data - self.params.offset
-      self.mass_flow_data = float(delta) / float(self.params.medium_coeff)
-      return 1
-    return 0
+  def config_full_output_mode(self) -> bool:
+    # Per device manual: line=0, start=32, count=32 outputs all points.
+    if not self.set_stream_control(False):
+      return False
+    time.sleep(0.7)
+    if not self.set_output_line_data(0, 32, 32):
+      return False
+    time.sleep(0.7)
+    self.save_config()
+    time.sleep(0.7)
+    self.total_points = self.WY6005_MAX_POINTS
+    return self.set_stream_control(True)
+
+  def config_single_frame_mode(self) -> bool:
+    if not self.set_stream_control(False):
+      return False
+    if not self.set_frame_mode(True):
+      return False
+    self.save_config()
+    return self.set_stream_control(True)
+
+  def config_continuous_mode(self) -> bool:
+    if not self.set_stream_control(False):
+      return False
+    if not self.set_frame_mode(False):
+      return False
+    self.save_config()
+    return self.set_stream_control(True)
+
+  def _find_sync(self, timeout_s: float) -> bool:
+    deadline = time.time() + timeout_s
+    sync_len = len(self.WY6005_SYNC_BYTES)
+    idx = 0
+    while time.time() < deadline:
+      b = self.ser.read(1)
+      if not b:
+        continue
+      if b[0] == self.WY6005_SYNC_BYTES[idx]:
+        idx += 1
+        if idx == sync_len:
+          return True
+      else:
+        idx = 1 if b[0] == self.WY6005_SYNC_BYTES[0] else 0
+    return False
+
+  def trigger_get_raw(self, max_points: Optional[int] = None, timeout_ms: int = 500) -> Tuple[List[int], List[int], List[int], List[int]]:
+    """
+    @brief Trigger one frame and read raw x/y/z/i arrays.
+    @param max_points Optional cap. If not set, uses configured total_points.
+    @param timeout_ms Timeout to wait for a frame.
+    @return tuple of lists (x, y, z, intensity); empty lists if timeout/error.
+    """
+    points = self.total_points if self.total_points else (max_points or self.WY6005_MAX_POINTS)
+    point_bytes = points * self.WY6005_POINT_DATA_SIZE
+    total_size = self.WY6005_FRAME_HEADER_SIZE + point_bytes
+
+    # Flush buffer to avoid stale data
+    self.ser.reset_input_buffer()
+
+    # Trigger frame
+    self.trigger_one_frame()
+
+    if not self._find_sync(timeout_ms / 1000.0):
+      return [], [], [], []
+
+    payload = self.ser.read(total_size)
+    if len(payload) != total_size:
+      return [], [], [], []
+
+    x_list: List[int] = []
+    y_list: List[int] = []
+    z_list: List[int] = []
+    i_list: List[int] = []
+
+    for i in range(points):
+      offset = self.WY6005_FRAME_HEADER_SIZE + i * self.WY6005_POINT_DATA_SIZE
+      if offset + self.WY6005_POINT_DATA_SIZE > len(payload):
+        break
+      x, y, z, inten = struct.unpack_from('<hhhh', payload, offset)
+      x_list.append(x)
+      y_list.append(y)
+      z_list.append(z)
+      i_list.append(inten)
+
+    return x_list, y_list, z_list, i_list
+
+
+if __name__ == "__main__":
+  # Simple sanity check (requires actual hardware connected)
+  sensor = DFRobot_WY6005(port="/dev/ttyUSB0", baudrate=921600)
+  try:
+    sensor.config_single_frame_mode()
+    sensor.config_full_output_mode()
+    xs, ys, zs, is_ = sensor.trigger_get_raw(timeout_ms=300)
+    print(f"Received points: {len(xs)}")
+  finally:
+    sensor.close()
