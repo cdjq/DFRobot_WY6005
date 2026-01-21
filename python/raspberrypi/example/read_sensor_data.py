@@ -70,8 +70,8 @@ def loop():
   if len(list_x) > 0:
     print(f"Received {len(list_x)} points")
     # Print data for every point
-    for idx in range(len(list_x)):
-      print(f"Point[{idx}]: X:{list_x[idx]} Y:{list_y[idx]} Z:{list_z[idx]} I:{list_i[idx]}")
+    for idx, x_val in enumerate(list_x):
+      print(f"Point[{idx}]: X:{x_val} Y:{list_y[idx]} Z:{list_z[idx]} I:{list_i[idx]}")
   else:
     print("No data received or timeout")
 
