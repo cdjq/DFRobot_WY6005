@@ -20,6 +20,12 @@ from DFRobot_WY6005 import DFRobot_WY6005
 # Please change '/dev/ttyUSB0' to your actual serial port
 wy6005 = DFRobot_WY6005(port="/dev/ttyUSB0", baudrate=921600)
 
+# Demo Mode Selection
+# 0: Full Output Mode (All 8x64 points)
+# 1: Single Line Mode (Line 4, points 0-63)
+# 2: Single Point Mode (Line 4, Point 32)
+DEMO_MODE = 0
+
 def setup():
   print("WY6005 init...")
 
@@ -30,22 +36,33 @@ def setup():
   
   print("successed")
 
-  # Configure to full output mode (get all 64*8 points)
-  if wy6005.config_full_output_mode():
-    print("Config Full Output Mode: Success")
-  else:
-    print("Config Full Output Mode: Failed")
+  ret = False
+  if DEMO_MODE == 0:
+    # Configure to full output mode (get all 64*8 points)
+    ret = wy6005.config_full_output_mode()
+    print(f"Config Full Output Mode: {'Success' if ret else 'Failed'}")
+  elif DEMO_MODE == 1:
+    # Configure to single line mode (Line 4, all 64 points)
+    # config_single_line_mode(line, start_point, end_point)
+    ret = wy6005.config_single_line_mode(4, 1, 64)
+    print(f"Config Single Line Mode (Line 4): {'Success' if ret else 'Failed'}")
+  elif DEMO_MODE == 2:
+    # Configure to single point mode (Line 4, Point 32)
+    # config_single_point_mode(line, point)
+    ret = wy6005.config_single_point_mode(4, 32)
+    print(f"Config Single Point Mode (Line 4, Point 32): {'Success' if ret else 'Failed'}")
+
 
 def loop():
   # Trigger acquisition of one frame
   # returns lists: x, y, z, intensity
-  x, y, z, i = wy6005.trigger_get_raw(timeout_ms=1000)
+  list_x, list_y, list_z, list_i = wy6005.trigger_get_raw(timeout_ms=1000)
   
-  if len(x) > 0:
-    print(f"Received {len(x)} points")
+  if len(list_x) > 0:
+    print(f"Received {len(list_x)} points")
     # Print the middle point data as example
-    idx = len(x) // 2
-    print(f"Sample Point[{idx}]: X:{x[idx]} Y:{y[idx]} Z:{z[idx]} I:{i[idx]}")
+    idx = len(list_x) // 2
+    print(f"Sample Point[{idx}]: X:{list_x[idx]} Y:{list_y[idx]} Z:{list_z[idx]} I:{list_i[idx]}")
   else:
     print("No data received or timeout")
   

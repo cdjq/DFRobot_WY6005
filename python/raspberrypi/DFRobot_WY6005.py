@@ -202,15 +202,15 @@ class DFRobot_WY6005:
     sync_len = len(self.WY6005_SYNC_BYTES)
     idx = 0
     while time.time() < deadline:
-      b = self.ser.read(1)
-      if not b:
+      recv_byte = self.ser.read(1)
+      if not recv_byte:
         continue
-      if b[0] == self.WY6005_SYNC_BYTES[idx]:
+      if recv_byte[0] == self.WY6005_SYNC_BYTES[idx]:
         idx += 1
         if idx == sync_len:
           return True
       else:
-        idx = 1 if b[0] == self.WY6005_SYNC_BYTES[0] else 0
+        idx = 1 if recv_byte[0] == self.WY6005_SYNC_BYTES[0] else 0
     return False
 
   def trigger_get_raw(self, max_points=None, timeout_ms=500):
@@ -247,10 +247,10 @@ class DFRobot_WY6005:
       offset = self.WY6005_FRAME_HEADER_SIZE + i * self.WY6005_POINT_DATA_SIZE
       if offset + self.WY6005_POINT_DATA_SIZE > len(payload):
         break
-      x, y, z, inten = struct.unpack_from('<hhhh', payload, offset)
-      x_list.append(x)
-      y_list.append(y)
-      z_list.append(z)
-      i_list.append(inten)
+      val_x, val_y, val_z, val_i = struct.unpack_from('<hhhh', payload, offset)
+      x_list.append(val_x)
+      y_list.append(val_y)
+      z_list.append(val_z)
+      i_list.append(val_i)
 
     return x_list, y_list, z_list, i_list
