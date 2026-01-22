@@ -134,21 +134,57 @@ bool configContinuousMode(void);
 
 ### Raspberry Pi Python Library
 ```python
-# Basic usage example
 from DFRobot_WY6005 import DFRobot_WY6005
 import serial
+import sys
+import time
 
-# Initialize the sensor
-sensor = DFRobot_WY6005(serial.Serial("/dev/ttyAMA0", 115200))
+# Select the correct serial port:
+# - For USB-to-serial: '/dev/ttyUSB0'
+# - For Raspberry Pi GPIO (TX/RX): '/dev/serial0' (recommended)
+try:
+    wy6005 = DFRobot_WY6005(port="/dev/serial0", baudrate=921600)
+except serial.SerialException as e:
+    print(f"Error: Could not open serial port: {e}")
+    sys.exit(1)
 
-# Configure sensor
-sensor.config_full_output_mode()
-sensor.config_single_frame_mode()
+# Demo mode selection
+# 0: Full Output (8x64 points)
+# 1: Single Line (Line 4, points 1-64)
+# 2: Single Point (Line 4, Point 32)
+demo_mode = 0
 
-# Read data
-points = sensor.trigger_get_raw()
-for i in range(len(points)):
-    print(f"Point {i}: x={points[i]['x']}, y={points[i]['y']}, z={points[i]['z']}, intensity={points[i]['intensity']}")
+def setup():
+    print("WY6005 init...")
+    while not wy6005.config_single_frame_mode():
+        print("failed, Connection error or device busy!")
+        time.sleep(1)
+    print("successed")
+    if demo_mode == 0:
+        wy6005.config_full_output_mode()
+    elif demo_mode == 1:
+        wy6005.config_single_line_mode(4, 1, 64)
+    elif demo_mode == 2:
+        wy6005.config_single_point_mode(4, 32)
+
+def loop():
+    list_x, list_y, list_z, list_i = wy6005.trigger_get_raw(timeout_ms=1000)
+    if len(list_x) > 0:
+        print(f"Received {len(list_x)} points")
+        for idx, x_val in enumerate(list_x):
+            print(f"Point[{idx}]: X:{x_val} Y:{list_y[idx]} Z:{list_z[idx]} I:{list_i[idx]}")
+    else:
+        print("No data received or timeout")
+    time.sleep(2)
+
+if __name__ == "__main__":
+    setup()
+    try:
+        while True:
+            loop()
+    except KeyboardInterrupt:
+        wy6005.close()
+        print("Program stopped")
 ```
 
 ## Compatibility

@@ -24,10 +24,6 @@ DFRobot_WY6005::DFRobot_WY6005(HardwareSerial& serial, uint32_t config, int8_t r
 
 void DFRobot_WY6005::begin(uint32_t baudRate)
 {
-  // HardwareSerial::begin has different signatures on different cores:
-  // - ESP32: begin(baud, config, rxPin, txPin)
-  // - AVR/Arduino UNO: begin(baud) or begin(baud, config)
-  // Use conditional compilation to call the correct overload.
 #if defined(ESP32)
   _serial->begin(baudRate, _config, _rxPin, _txPin);
 #elif defined(ARDUINO_ARCH_ESP8266)
