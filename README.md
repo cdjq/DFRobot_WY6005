@@ -2,12 +2,12 @@
 - [中文版](./README_CN.md)
 
 ## Overview
-The DFRobot_WY6005 is a high-precision 3D ToF (Time of Flight) sensor module that provides accurate distance measurements in a compact form factor. It features serial communication interface, multiple operating modes, and high-resolution distance data, making it suitable for applications in robotics, automation, 3D scanning, and proximity sensing.
+The DFRobot_WY6005 is a high-precision DToF (Time of Flight) sensor module that provides accurate distance measurements in a compact form factor. It features serial communication interface, multiple operating modes, and high-resolution distance data, making it suitable for applications in robotics, automation,proximity sensing.
 
 The sensor includes built-in signal processing capabilities and supports various output modes to meet different application requirements. Each WY6005 sensor is factory calibrated and can be easily integrated into your project via the serial interface.
 
 ## Product Link
-[WY6005 ToF Sensor](https://www.dfrobot.com/)
+[WY6005 DToF Sensor](https://www.dfrobot.com/)
 
 ```text
 SKU: WY6005
@@ -83,29 +83,6 @@ bool triggerOneFrame(void);
 bool saveConfig(void);
 
 /**
- * @fn configSinglePointMode
- * @brief Configure single point output mode
- * @param line Line number (1..8)
- * @param point Point index (0..64)
- * @return bool type, indicates the configuration status
- * @retval true Configuration successful
- * @retval false Configuration failed
- */
-bool configSinglePointMode(uint8_t line, uint8_t point);
-
-/**
- * @fn configSingleLineMode
- * @brief Configure single line output mode (outputs a full row)
- * @param line Line number (1..8)
- * @param startPoint Start point index (0..64)
- * @param endPoint End point index (0..64)
- * @return bool type, indicates the configuration status
- * @retval true Configuration successful
- * @retval false Configuration failed
- */
-bool configSingleLineMode(uint8_t line, uint8_t startPoint, uint8_t endPoint);
-
-/**
  * @fn configFrameMode
  * @brief Configure whether sensor runs in single-frame or continuous frame mode
  * @param mode Frame mode (eFrameSingle or eFrameContinuous)
@@ -126,16 +103,6 @@ bool configFrameMode(eFrameMode_t mode);
  * @retval false Configuration failed
  */
 bool configMeasureMode(eMeasureMode_t mode, uint8_t arg1 = 0, uint8_t arg2 = 0);
-
-/**
- * @fn configFrameMode
- * @brief Configure whether sensor runs in single-frame or continuous frame mode
- * @param mode Frame mode (eFrameSingle or eFrameContinuous)
- * @return bool type, indicates the configuration status
- * @retval true Configuration successful
- * @retval false Configuration failed
- */
-bool configFrameMode(eFrameMode_t mode);
 ```
 
 <!-- Raspberry Pi Python usage removed as requested -->

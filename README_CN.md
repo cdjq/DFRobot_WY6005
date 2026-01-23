@@ -84,29 +84,6 @@ bool triggerOneFrame(void);
 bool saveConfig(void);
 
 /**
- * @fn configSinglePointMode
- * @brief 配置单点输出模式
- * @param line 行号（1..8）
- * @param point 点索引（0..64）
- * @return bool 类型，表示配置状态
- * @retval true 配置成功
- * @retval false 配置失败
- */
-bool configSinglePointMode(uint8_t line, uint8_t point);
-
-/**
- * @fn configSingleLineMode
- * @brief 配置单行输出模式（输出整行或指定起止点）
- * @param line 行号（1..8）
- * @param startPoint 起始点索引（0..64）
- * @param endPoint 结束点索引（0..64）
- * @return bool 类型，表示配置状态
- * @retval true 配置成功
- * @retval false 配置失败
- */
-bool configSingleLineMode(uint8_t line, uint8_t startPoint, uint8_t endPoint);
-
-/**
  * @fn configFrameMode
  * @brief 配置传感器为单帧或连续帧模式
  * @param mode 模式（eFrameSingle 或 eFrameContinuous）
@@ -128,15 +105,6 @@ bool configFrameMode(eFrameMode_t mode);
  */
 bool configMeasureMode(eMeasureMode_t mode, uint8_t arg1 = 0, uint8_t arg2 = 0);
 
-/**
- * @fn configFrameMode
- * @brief 配置传感器为单帧或连续帧模式
- * @param mode 模式（eFrameSingle 或 eFrameContinuous）
- * @return bool 类型，表示配置状态
- * @retval true 配置成功
- * @retval false 配置失败
- */
-bool configFrameMode(eFrameMode_t mode);
 ```
 
 ## 兼容性
