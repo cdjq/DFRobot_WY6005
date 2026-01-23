@@ -58,7 +58,7 @@ void begin(uint32_t baudRate);
 void clearBuffer(void);
 
 /**
- * @fn triggerGetRaw
+ * @fn getPointData
  * @brief 触发一次并读取原始 x/y/z 值（不滤波）
  * @param xBuf x 值缓冲
  * @param yBuf y 值缓冲
@@ -67,7 +67,7 @@ void clearBuffer(void);
  * @param timeoutMs 超时（毫秒）
  * @return 解析到的点数，超时或错误返回 -1
  */
-int triggerGetRaw(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, int16_t* iBuf, uint32_t timeoutMs);
+int getPointData(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, int16_t* iBuf, uint32_t timeoutMs);
 
 /**
  * @fn triggerOneFrame
@@ -107,14 +107,36 @@ bool configSinglePointMode(uint8_t line, uint8_t point);
 bool configSingleLineMode(uint8_t line, uint8_t startPoint, uint8_t endPoint);
 
 /**
- * @fn configMeasureFrameMode
+ * @fn configFrameMode
  * @brief 配置传感器为单帧或连续帧模式
- * @param mode 模式（eFrameModeSingle 或 eFrameModeContinuous）
+ * @param mode 模式（eFrameSingle 或 eFrameContinuous）
  * @return bool 类型，表示配置状态
  * @retval true 配置成功
  * @retval false 配置失败
  */
-bool configMeasureFrameMode(eFrameMode_t mode);
+bool configFrameMode(eFrameMode_t mode);
+
+/**
+ * @fn configMeasureMode
+ * @brief 配置测量输出模式（单点 / 单行 / 全输出）
+ * @param mode 模式（eMeasureMode_t）
+ * @param arg1 单点：行（1..8）；单行：行（1..8）；全输出：忽略
+ * @param arg2 单点：点（0..64）；其他模式忽略
+ * @return bool 类型，表示配置状态
+ * @retval true 配置成功
+ * @retval false 配置失败
+ */
+bool configMeasureMode(eMeasureMode_t mode, uint8_t arg1 = 0, uint8_t arg2 = 0);
+
+/**
+ * @fn configFrameMode
+ * @brief 配置传感器为单帧或连续帧模式
+ * @param mode 模式（eFrameSingle 或 eFrameContinuous）
+ * @return bool 类型，表示配置状态
+ * @retval true 配置成功
+ * @retval false 配置失败
+ */
+bool configFrameMode(eFrameMode_t mode);
 ```
 
 ## 兼容性

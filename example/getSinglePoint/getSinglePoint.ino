@@ -10,6 +10,8 @@
  */
 #include "DFRobot_WY6005.h"
 
+#define LINE_NUM  4
+#define POINT_NUM 32
 // Instantiate the sensor object
 // Use Serial1 for communication, change pins 25/26 to your actual RX/TX pins
 DFRobot_WY6005 wy6005(Serial1, SERIAL_8N1, 25, 26);
@@ -20,8 +22,8 @@ void setup()
   wy6005.begin(921600);
   Serial.println("WY6005 Single Point Demo");
   
-    if (!wy6005.configMeasureFrameMode(DFRobot_WY6005::eFrameModeSingle)) {
-    Serial.println("Error: configMeasureFrameMode failed");
+    if (!wy6005.configFrameMode(DFRobot_WY6005::eFrameSingle)) {
+    Serial.println("Error: configFrameMode failed");
   }
 
   // 2. Configure Single Point Mode
@@ -29,7 +31,7 @@ void setup()
   // Line range: 1-8
   // Point range: 0-63
   Serial.println("Configuring Single Point Mode (Line 4, Point 32)...");
-  if (wy6005.configSinglePointMode(4, 32)) {
+  if (wy6005.configMeasureMode(DFRobot_WY6005::eMeasureModeSinglePoint, LINE_NUM, POINT_NUM)) {
     Serial.println("Configuration Successful!");
   } else {
     Serial.println("Configuration Failed!");
@@ -39,8 +41,8 @@ void setup()
 
 void loop()
 {
-  int pointsRead = wy6005.triggerGetRaw(wy6005.point.xBuf, wy6005.point.yBuf, 
-                                        wy6005.point.zBuf, wy6005.point.iBuf, 
+  int pointsRead = wy6005.getPointData(wy6005.point.xBuf, wy6005.point.yBuf, 
+                                       wy6005.point.zBuf, wy6005.point.iBuf, 
                                         300);
 
   if (pointsRead > 0) {

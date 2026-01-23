@@ -100,11 +100,19 @@ public:
    * @brief Frame mode enumeration: single frame / continuous frame
    */
   typedef enum {
-    eFrameModeSingle     = 0, /*!< Single frame mode */
-    eFrameModeContinuous = 1  /*!< Continuous frame mode */
+    eFrameSingle     = 0, /*!< Single frame mode */
+    eFrameContinuous = 1  /*!< Continuous frame mode */
   } eFrameMode_t;
 
-  /* Removed eModuleStatus_t; configMeasureFrameMode returns bool like other APIs */
+  /**
+   * @enum eMeasureMode_t
+   * @brief Measurement output mode: single point / single line / full output
+   */
+   typedef enum {
+    eMeasureModeSinglePoint = 0, /*!< Single point output (provide line and point) */
+    eMeasureModeSingleLine  = 1, /*!< Single line output (provide line only) */
+    eMeasureModeFull        = 2  /*!< Full output (all points) */
+  } eMeasureMode_t;
 
   /**
    * @struct sPoint_t
@@ -152,7 +160,7 @@ public:
   void parsePointData(const uint8_t* pointData, int16_t* x, int16_t* y, int16_t* z, int16_t* i);
 
   /**
-   * @fn triggerGetRaw
+   * @fn getPointData
    * @brief Trigger one frame and read raw x/y/z values (no filtering)
    * @param xBuf Buffer for x values 
    * @param yBuf Buffer for y values 
@@ -162,7 +170,7 @@ public:
    * @param timeoutMs Timeout in milliseconds to wait for a complete frame
    * @return Number of points parsed, or -1 on error/timeout
    */
-  int triggerGetRaw(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, int16_t* iBuf,uint32_t timeoutMs);
+  int getPointData(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, int16_t* iBuf,uint32_t timeoutMs);
 
   /**
    * @fn triggerOneFrame
@@ -183,37 +191,26 @@ public:
   bool saveConfig(void);
 
   /**
-   * @fn configSinglePointMode
-   * @brief Configure single point mode
-   * @param line Line number
-   * @param point Point number
-   * @return Whether the configuration was successful
-   * @retval true: Success
-   * @retval false: Failure
+   * @fn configMeasureMode
+   * @brief Configure measurement output mode
+   * @param mode Measurement mode (eMeasureMode_t)
+   * @param arg1 For single-point: line (1..8). For single-line: line (1..8).
+   * @param arg2 For single-point: point index (0..64). Ignored for other modes.
+   * @return bool type, indicates the configuration status
+   * @retval true Configuration successful
+   * @retval false Configuration failed
    */
-  bool configSinglePointMode(uint8_t line, uint8_t point);
+  bool configMeasureMode(eMeasureMode_t mode, uint8_t arg1 = 0, uint8_t arg2 = 0);
 
   /**
-   * @fn configSingleLineMode
-   * @brief Configure single line mode
-   * @param line Line number
-   * @param startPoint Start point number
-   * @param endPoint End point number
-   * @return Whether the configuration was successful
-   * @retval true: Success
-   * @retval false: Failure
-   */
-  bool configSingleLineMode(uint8_t line, uint8_t startPoint, uint8_t endPoint);
-
-  /**
-   * @fn configMeasureFrameMode
+   * @fn configFrameMode
    * @brief Configure frame mode (single frame or continuous)
-  * @param mode Frame mode (eFrameModeSingle or eFrameModeContinuous)
-  * @return Whether the configuration was successful
-  * @retval true: Success
-  * @retval false: Failure
+  * @param mode Frame mode (eFrameSingle or eFrameContinuous)
+  * @return bool type, indicates the configuration status
+  * @retval true Configuration successful
+  * @retval false Configuration failed
   */
-  bool configMeasureFrameMode(eFrameMode_t mode);
+  bool configFrameMode(eFrameMode_t mode);
 
   sPoint_t point; /*!< Point data */
 };

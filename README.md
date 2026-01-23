@@ -57,7 +57,7 @@ void begin(uint32_t baudRate);
 void clearBuffer(void);
 
 /**
- * @fn triggerGetRaw
+ * @fn getPointData
  * @brief Trigger one frame and read raw x/y/z values (no filtering)
  * @param xBuf Buffer for x values
  * @param yBuf Buffer for y values
@@ -66,7 +66,7 @@ void clearBuffer(void);
  * @param timeoutMs Timeout in milliseconds to wait for a complete frame
  * @return Number of points parsed, or -1 on error/timeout
  */
-int triggerGetRaw(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, int16_t* iBuf, uint32_t timeoutMs);
+int getPointData(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, int16_t* iBuf, uint32_t timeoutMs);
 
 /**
  * @fn triggerOneFrame
@@ -106,14 +106,36 @@ bool configSinglePointMode(uint8_t line, uint8_t point);
 bool configSingleLineMode(uint8_t line, uint8_t startPoint, uint8_t endPoint);
 
 /**
- * @fn configMeasureFrameMode
+ * @fn configFrameMode
  * @brief Configure whether sensor runs in single-frame or continuous frame mode
- * @param mode Frame mode (eFrameModeSingle or eFrameModeContinuous)
+ * @param mode Frame mode (eFrameSingle or eFrameContinuous)
  * @return bool type, indicates the configuration status
  * @retval true Configuration successful
  * @retval false Configuration failed
  */
-bool configMeasureFrameMode(eFrameMode_t mode);
+bool configFrameMode(eFrameMode_t mode);
+
+/**
+ * @fn configMeasureMode
+ * @brief Configure measurement output mode (single-point / single-line / full)
+ * @param mode Measurement mode (eMeasureMode_t)
+ * @param arg1 For single-point: line (1..8). For single-line: line (1..8). For full: ignored.
+ * @param arg2 For single-point: point (0..64). Otherwise ignored.
+ * @return bool type, indicates the configuration status
+ * @retval true Configuration successful
+ * @retval false Configuration failed
+ */
+bool configMeasureMode(eMeasureMode_t mode, uint8_t arg1 = 0, uint8_t arg2 = 0);
+
+/**
+ * @fn configFrameMode
+ * @brief Configure whether sensor runs in single-frame or continuous frame mode
+ * @param mode Frame mode (eFrameSingle or eFrameContinuous)
+ * @return bool type, indicates the configuration status
+ * @retval true Configuration successful
+ * @retval false Configuration failed
+ */
+bool configFrameMode(eFrameMode_t mode);
 ```
 
 <!-- Raspberry Pi Python usage removed as requested -->

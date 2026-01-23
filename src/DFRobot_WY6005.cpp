@@ -24,7 +24,7 @@ DFRobot_WY6005::DFRobot_WY6005(HardwareSerial& serial, uint32_t config, int8_t r
 
 void DFRobot_WY6005::begin(uint32_t baudRate)
 {
-  //115200 baud rate is not supported now
+  //115200 baud rate is not supported now only support 921600
   if (baudRate == 115200) {
     DBG("115200 baud rate is not supported");
   }
@@ -50,14 +50,14 @@ void DFRobot_WY6005::begin(uint32_t baudRate)
   _serial->begin(baudRate);
 #endif
 #endif
-  delay(100);
+  delay(400);
   DBG("Serial port started with baud rate: %lu", baudRate);
 }
 
 void DFRobot_WY6005::clearBuffer(void)
 {
   while(_serial->available()) _serial->read();
-  delay(100);
+  delay(300);
 }
 
 bool DFRobot_WY6005::sendCommand(const String& command)
@@ -98,79 +98,53 @@ bool DFRobot_WY6005::saveConfig(void)
   return sendCommand(command);
 }
 
-bool DFRobot_WY6005::configSinglePointMode(uint8_t line, uint8_t point)
+
+bool DFRobot_WY6005::configMeasureMode(eMeasureMode_t mode, uint8_t arg1, uint8_t arg2)
 {
-  DBG("Configuring single point mode: line=%d, point=%d", line, point);
-
-  // Validate parameters: line 1..8, point 0..64
-  if (line < 1 || line > 8) {
-    DBG("configSinglePointMode: invalid line %d (must be 1..8)", line);
-    return false;
-  }
-  if (point > 64) {
-    DBG("configSinglePointMode: invalid point %d (must be 0..64)", point);
-    return false;
-  }
-
-  if (!setStreamControl(false))
-    return false;
+  if (!setStreamControl(false)) return false;
   delay(700);
-  if (!setOutputLineData(line, point, point))
-    return false;
+
+  if (mode == eMeasureModeSinglePoint) {
+    // arg1: Line, arg2: Point
+    DBG("Config: Single Point, Line: %d, Point: %d", arg1, arg2);
+    if (!setOutputLineData(arg1, arg2, arg2)) return false;
+    _totalPoints = 1;
+  } 
+  else if (mode == eMeasureModeSingleLine) {
+    // arg1: Line. Start: 1, End: 64
+    DBG("Config: Single Line, Line: %d", arg1);
+    if (!setOutputLineData(arg1, 1, 64)) return false;
+    _totalPoints = 64;
+  }
+  else if (mode == eMeasureModeFull) {
+    if(!setOutputLineData(0, 0, 0)) return false;
+    _totalPoints = WY6005_MAX_POINTS;
+    DBG("Config: Full Mode");
+  }
+
   delay(700);
   if (!saveConfig()) {
-    DBG("Warning: saveConfig failed after configSinglePointMode");
+    DBG("Warning: saveConfig failed");
   }
   delay(700);
-  _totalPoints = 1;
   return setStreamControl(true);
 }
 
-bool DFRobot_WY6005::configSingleLineMode(uint8_t line, uint8_t startPoint, uint8_t endPoint)
-{
-  DBG("Configuring single line mode: line=%d, start=%d, end=%d", line, startPoint, endPoint);
 
-  if (line < 1 || line > 8) {
-    DBG("configSingleLineMode: invalid line %d (must be 1..8)", line);
-    return false;
-  }
-  if (startPoint > 64 || endPoint > 64) {
-    DBG("configSingleLineMode: point out of range start=%d end=%d (must be 0..64)", startPoint, endPoint);
-    return false;
-  }
-  if (startPoint > endPoint) {
-    DBG("configSingleLineMode: startPoint %d > endPoint %d", startPoint, endPoint);
-    return false;
-  }
-
-  if (!setStreamControl(false))
-    return false;
-  delay(700);
-  if (!setOutputLineData(line, startPoint, endPoint))
-    return false;
-  delay(700);
-  if (!saveConfig()) {
-    DBG("Warning: saveConfig failed after configSingleLineMode");
-  }
-  delay(700);
-  _totalPoints = endPoint - startPoint + 1;
-  return setStreamControl(true);
-}
-
-bool DFRobot_WY6005::configMeasureFrameMode(eFrameMode_t mode)
+bool DFRobot_WY6005::configFrameMode(eFrameMode_t mode)
 {
   DBG("Configuring frame mode: %d", mode);
 
   if (!setStreamControl(false))
     return false;
    delay(700);
-  bool frameMode = ((mode == eFrameModeSingle) ? true : false);
+  bool frameMode = ((mode == eFrameSingle) ? true : false);
 
   if (!setFrameMode(frameMode))
     return false;
      delay(700);
   if (!saveConfig()) {
-    DBG("Warning: saveConfig failed after configMeasureFrameMode");
+    DBG("Warning: saveConfig failed after configFrameMode");
   }
   delay(700);
   return setStreamControl(true);
@@ -184,7 +158,7 @@ void DFRobot_WY6005::parsePointData(const uint8_t* pointData, int16_t* x, int16_
   *i = (int16_t)((pointData[7] << 8) | pointData[6]);
 }
 
-int DFRobot_WY6005::triggerGetRaw(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, int16_t* iBuf, uint32_t timeoutMs)
+int DFRobot_WY6005::getPointData(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, int16_t* iBuf, uint32_t timeoutMs)
 {
   // Decide how many points to read: prefer configured _totalPoints if set, otherwise use maxPoints
   int       points          = _totalPoints;
@@ -197,6 +171,9 @@ int DFRobot_WY6005::triggerGetRaw(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, i
 
   if (totalFrameSize > sizeof(frameBuffer))
     return -2;
+
+  // Clear buffer before sending trigger command to avoid reading previous responses
+  while(_serial->available()) _serial->read();
 
   _serial->print("AT+SPAD_TRIG_ONE_FRAME=1");
   _serial->print("\n");
