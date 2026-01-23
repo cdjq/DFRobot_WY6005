@@ -83,18 +83,29 @@ private:
    * @brief Set output line data
    * @param line Line number
    * @param startPoint Start point number
-   * @param pointCount Point count
+   * @param endPoint End point number
    * @return Whether the setting was successful
    * @retval true: Success
    * @retval false: Failure
    */
-  bool setOutputLineData(uint8_t line, uint8_t startPoint, uint8_t pointCount);
+  bool setOutputLineData(uint8_t line, uint8_t startPoint, uint8_t endPoint);
 
   int _startPoint;  /*!< Start point */
   int _endPoint;    /*!< End point */
   int _totalPoints; /*!< Total points */
 
 public:
+  /**
+   * @enum FrameMode_t
+   * @brief Frame mode enumeration: single frame / continuous frame
+   */
+  typedef enum {
+    eFrameModeSingle     = 0, /*!< Single frame mode */
+    eFrameModeContinuous = 1  /*!< Continuous frame mode */
+  } eFrameMode_t;
+
+  /* Removed eModuleStatus_t; configMeasureFrameMode returns bool like other APIs */
+
   /**
    * @struct sPoint_t
    * @brief WY6005 sensor point data structure
@@ -124,6 +135,12 @@ public:
   void begin(uint32_t baudRate);
 
   /**
+   * @fn clearBuffer
+   * @brief Clear serial receive buffer
+   */
+  void clearBuffer(void);
+
+  /**
    * @fn parsePointData
    * @brief Parse point data
    * @param pointData Point data to parse
@@ -137,15 +154,15 @@ public:
   /**
    * @fn triggerGetRaw
    * @brief Trigger one frame and read raw x/y/z values (no filtering)
-   * @param xBuf Buffer for x values (may be NULL if not needed)
-   * @param yBuf Buffer for y values (may be NULL if not needed)
-   * @param zBuf Buffer for z values (may be NULL if not needed)
-   * @param iBuf Buffer for i values (may be NULL if not needed)
+   * @param xBuf Buffer for x values 
+   * @param yBuf Buffer for y values 
+   * @param zBuf Buffer for z values 
+   * @param iBuf Buffer for i values 
    * @param maxPoints Maximum points to parse (caller buffer length)
    * @param timeoutMs Timeout in milliseconds to wait for a complete frame
    * @return Number of points parsed, or -1 on error/timeout
    */
-  int triggerGetRaw(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, int16_t* iBuf, int maxPoints, uint32_t timeoutMs);
+  int triggerGetRaw(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, int16_t* iBuf,uint32_t timeoutMs);
 
   /**
    * @fn triggerOneFrame
@@ -189,22 +206,14 @@ public:
   bool configSingleLineMode(uint8_t line, uint8_t startPoint, uint8_t endPoint);
 
   /**
-   * @fn configSingleFrameMode
-   * @brief Configure single frame mode
-   * @return Whether the configuration was successful
-   * @retval true: Success
-   * @retval false: Failure
-   */
-  bool configSingleFrameMode(void);
-
-  /**
-   * @fn configContinuousMode
-   * @brief Configure continuous mode
-   * @return Whether the configuration was successful
-   * @retval true: Success
-   * @retval false: Failure
-   */
-  bool configContinuousMode(void);
+   * @fn configMeasureFrameMode
+   * @brief Configure frame mode (single frame or continuous)
+  * @param mode Frame mode (eFrameModeSingle or eFrameModeContinuous)
+  * @return Whether the configuration was successful
+  * @retval true: Success
+  * @retval false: Failure
+  */
+  bool configMeasureFrameMode(eFrameMode_t mode);
 
   sPoint_t point; /*!< Point data */
 };

@@ -10,22 +10,20 @@
  */
 #include "DFRobot_WY6005.h"
 DFRobot_WY6005 wy6005(Serial1, SERIAL_8N1, 25, 26);
-#define LINE_NUM    3
+#define LINE_NUM    4
 #define START_POINT 1
-#define END_POINT   64
-#define TOTAL_POINTS (END_POINT - START_POINT + 1)
+#define END_POINT   3
 
 void setup()
 {
   Serial.begin(115200);
   wy6005.begin(921600);
-
-  if (!wy6005.configSingleFrameMode()) {
-    Serial.println("configSingleFrameMode failed");
+  // Configure single frame mode using new API
+  if (!wy6005.configMeasureFrameMode(DFRobot_WY6005::eFrameModeSingle)) {
+    Serial.println("configMeasureFrameMode failed");
   }
 
   Serial.println("Configuring Single Line Mode...");
- 
   if (!wy6005.configSingleLineMode(LINE_NUM, START_POINT, END_POINT)) {
     Serial.println("Configuration failed!");
   } else {
@@ -38,13 +36,12 @@ void setup()
     Serial.print(END_POINT);
     Serial.println(")");
   }
-  while(Serial1.available()) Serial1.read();
-  delay(500);
+  wy6005.clearBuffer();
 }
 
 void loop()
 {
-  int parsed = wy6005.triggerGetRaw(wy6005.point.xBuf, wy6005.point.yBuf, wy6005.point.zBuf, wy6005.point.iBuf, TOTAL_POINTS, 600);
+  int parsed = wy6005.triggerGetRaw(wy6005.point.xBuf, wy6005.point.yBuf, wy6005.point.zBuf, wy6005.point.iBuf, 300);
   Serial.println(parsed);
   if (parsed > 0) {
     Serial.print("Parsed ");
@@ -52,7 +49,7 @@ void loop()
     Serial.println(" points:");
     for (int i = 0; i < parsed; i++) {
       char buf[80];
-      sprintf(buf, "[%02d] x:%04dmm y:%04dmm z:%04dmm i:%04d", i, wy6005.point.xBuf[i], wy6005.point.yBuf[i], wy6005.point.zBuf[i], wy6005.point.iBuf[i]);
+      sprintf(buf, "[%02d] x:%04dmm y:%04dmm z:%04dmm i:%04d", i + START_POINT, wy6005.point.xBuf[i], wy6005.point.yBuf[i], wy6005.point.zBuf[i], wy6005.point.iBuf[i]);
       Serial.println(buf);
     }
   } else if (parsed == 0) {

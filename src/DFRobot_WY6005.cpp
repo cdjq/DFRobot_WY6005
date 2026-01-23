@@ -24,13 +24,19 @@ DFRobot_WY6005::DFRobot_WY6005(HardwareSerial& serial, uint32_t config, int8_t r
 
 void DFRobot_WY6005::begin(uint32_t baudRate)
 {
+  //115200 baud rate is not supported now
+  if (baudRate == 115200) {
+    DBG("115200 baud rate is not supported");
+  }
+
 #if defined(ESP32)
   _serial->begin(baudRate, _config, _rxPin, _txPin);
 #elif defined(ARDUINO_ARCH_ESP8266)
   // ESP8266 HardwareSerial doesn't support rx/tx pin remap in begin
+  DBG("ESP8266 only supports SoftwareSerial");
   _serial->begin(baudRate, _config);
 #elif defined(ARDUINO_ARCH_AVR)
-// AVR (UNO, etc.) only supports begin(baud) or begin(baud, config)
+  // AVR (UNO, etc.) only supports begin(baud) or begin(baud, config)
 #if defined(SERIAL_8N1)
   _serial->begin(baudRate, _config);
 #else
@@ -46,6 +52,12 @@ void DFRobot_WY6005::begin(uint32_t baudRate)
 #endif
   delay(100);
   DBG("Serial port started with baud rate: %lu", baudRate);
+}
+
+void DFRobot_WY6005::clearBuffer(void)
+{
+  while(_serial->available()) _serial->read();
+  delay(100);
 }
 
 bool DFRobot_WY6005::sendCommand(const String& command)
@@ -68,9 +80,9 @@ bool DFRobot_WY6005::setFrameMode(bool continuousMode)
   return sendCommand(command);
 }
 
-bool DFRobot_WY6005::setOutputLineData(uint8_t line, uint8_t startPoint, uint8_t pointCount)
+bool DFRobot_WY6005::setOutputLineData(uint8_t line, uint8_t startPoint, uint8_t endPoint)
 {
-  String command = "AT+SPAD_OUTPUT_LINE_DATA=" + String(line) + "," + String(startPoint) + "," + String(pointCount);
+  String command = "AT+SPAD_OUTPUT_LINE_DATA=" + String(line) + "," + String(startPoint) + "," + String(endPoint);
   return sendCommand(command);
 }
 
@@ -145,31 +157,22 @@ bool DFRobot_WY6005::configSingleLineMode(uint8_t line, uint8_t startPoint, uint
   return setStreamControl(true);
 }
 
-bool DFRobot_WY6005::configSingleFrameMode(void)
+bool DFRobot_WY6005::configMeasureFrameMode(eFrameMode_t mode)
 {
-  DBG("Configuring single frame mode");
+  DBG("Configuring frame mode: %d", mode);
 
   if (!setStreamControl(false))
     return false;
-  if (!setFrameMode(true))
-    return false;
-  if (!saveConfig()) {
-    DBG("Warning: saveConfig failed after configSingleFrameMode");
-  }
-  return setStreamControl(true);
-}
+   delay(700);
+  bool frameMode = ((mode == eFrameModeSingle) ? true : false);
 
-bool DFRobot_WY6005::configContinuousMode(void)
-{
-  DBG("Configuring continuous mode");
-
-  if (!setStreamControl(false))
+  if (!setFrameMode(frameMode))
     return false;
-  if (!setFrameMode(false))
-    return false;
+     delay(700);
   if (!saveConfig()) {
-    DBG("Warning: saveConfig failed after configContinuousMode");
+    DBG("Warning: saveConfig failed after configMeasureFrameMode");
   }
+  delay(700);
   return setStreamControl(true);
 }
 
@@ -181,7 +184,7 @@ void DFRobot_WY6005::parsePointData(const uint8_t* pointData, int16_t* x, int16_
   *i = (int16_t)((pointData[7] << 8) | pointData[6]);
 }
 
-int DFRobot_WY6005::triggerGetRaw(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, int16_t* iBuf, int maxPoints, uint32_t timeoutMs)
+int DFRobot_WY6005::triggerGetRaw(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, int16_t* iBuf, uint32_t timeoutMs)
 {
   // Decide how many points to read: prefer configured _totalPoints if set, otherwise use maxPoints
   int       points          = _totalPoints;
@@ -193,7 +196,7 @@ int DFRobot_WY6005::triggerGetRaw(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, i
   uint8_t frameBuffer[600];
 
   if (totalFrameSize > sizeof(frameBuffer))
-    return -1;
+    return -2;
 
   _serial->print("AT+SPAD_TRIG_ONE_FRAME=1");
   _serial->print("\n");

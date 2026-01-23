@@ -18,14 +18,10 @@ void setup()
 {
   Serial.begin(115200);
   wy6005.begin(921600);
-  while(Serial1.available())
-  {
-      Serial1.read();
-  }
   Serial.println("WY6005 Single Point Demo");
   
-  if (!wy6005.configSingleFrameMode()) {
-    Serial.println("Error: configSingleFrameMode failed");
+    if (!wy6005.configMeasureFrameMode(DFRobot_WY6005::eFrameModeSingle)) {
+    Serial.println("Error: configMeasureFrameMode failed");
   }
 
   // 2. Configure Single Point Mode
@@ -38,15 +34,14 @@ void setup()
   } else {
     Serial.println("Configuration Failed!");
   }
-  while(Serial1.available()) Serial1.read();
-  delay(500);
+  wy6005.clearBuffer();
 }
 
 void loop()
 {
   int pointsRead = wy6005.triggerGetRaw(wy6005.point.xBuf, wy6005.point.yBuf, 
                                         wy6005.point.zBuf, wy6005.point.iBuf, 
-                                        1, 300);
+                                        300);
 
   if (pointsRead > 0) {
     Serial.print("Point Data -> ");
