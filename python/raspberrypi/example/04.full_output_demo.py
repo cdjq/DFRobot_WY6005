@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-@file read_sensor_data.py
-@brief Read sensor data from DFRobot_64x8DTOF.
+@file 04.full_output_demo.py
+@brief Full output demo - Read all 8x64 points from DFRobot_64x8DTOF.
 @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
 @license     The MIT license (MIT)
 @author [PLELES] (https://github.com/PLELES)

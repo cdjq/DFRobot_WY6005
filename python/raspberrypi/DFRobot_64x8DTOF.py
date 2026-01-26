@@ -13,7 +13,7 @@ import struct
 import time
 import serial
 
-
+# pylint: disable=invalid-name
 
 class DFRobot_64x8DTOF:
   DTOF64X8_SYNC_BYTES = bytes([0x0A, 0x4F, 0x4B, 0x0A])
@@ -209,13 +209,13 @@ class DFRobot_64x8DTOF:
       return False
     if mode not in (self.FRAME_MODE_SINGLE, self.FRAME_MODE_CONTINUOUS):
       return False
-    fm = mode
+    frame_mode = mode
 
     # Perform sequence: stop stream -> set frame mode -> save -> start stream
     if not self._set_stream_control(False):
       return False
     time.sleep(0.7)
-    if not self._set_frame_mode(True if fm == self.FRAME_MODE_SINGLE else False):
+    if not self._set_frame_mode(True if frame_mode == self.FRAME_MODE_SINGLE else False):
       return False
     time.sleep(0.7)
     self._save_config()
