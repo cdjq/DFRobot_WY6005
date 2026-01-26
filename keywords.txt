@@ -1,12 +1,12 @@
 #######################################
-# Syntax Coloring Map For DFRobot_WY6005
+# Syntax Coloring Map For DFRobot_64x8DTOF
 #######################################
 
 #######################################
 # Datatypes (KEYWORD1)
 #######################################
 
-DFRobot_WY6005	KEYWORD1
+DFRobot_64x8DTOF	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)

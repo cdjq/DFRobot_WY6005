@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 '''
 @file read_sensor_data.py
-@brief Read sensor data from DFRobot_WY6005.
+@brief Read sensor data from DFRobot_64x8DTOF.
 @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
 @license     The MIT license (MIT)
 @author [PLELES] (https://github.com/PLELES)
 @version  V1.0
 @date  2026-1-21
-@https://github.com/DFRobot/DFRobot_WY6005
 '''
 
 import sys
@@ -15,14 +14,14 @@ import time
 import serial
 
 sys.path.append("../")
-from DFRobot_WY6005 import DFRobot_WY6005
+from DFRobot_64x8DTOF import DFRobot_64x8DTOF
 
 # Initialize sensor with UART port
 # If you are using a USB-to-serial converter, use '/dev/ttyUSB0'
 # If you are using Raspberry Pi GPIO (TX/RX), use '/dev/serial0' (Recommended for GPIO)
 # Note: Ensure Serial Hardware is enabled in 'sudo raspi-config' -> Interface Options
 try:
-  wy6005 = DFRobot_WY6005(port="/dev/serial0", baudrate=921600)
+  dtof64x8 = DFRobot_64x8DTOF(port="/dev/serial0", baudrate=921600)
 except serial.SerialException as e:
   print(f"Error: Could not open serial port: {e}")
   print("Please allow permission to read/write the serial port or change the port name.")
@@ -36,36 +35,31 @@ demo_mode = 0
 
 
 def setup():
-  print("WY6005 init...")
+  print("DFRobot_64x8DTOF init...")
 
-  # Retry configuration until success
-  while not wy6005.config_single_frame_mode():
-    print("failed, Connection error or device busy!")
-    time.sleep(1)
-
-  print("successed")
+  # Configure to single frame mode
+  ret = dtof64x8.config_frame_mode(dtof64x8.FRAME_MODE_SINGLE)
+  print(f"Config Single Frame Mode: {'Success' if ret else 'Failed'}")
 
   ret = False
   if demo_mode == 0:
     # Configure to full output mode (get all 64*8 points)
-    ret = wy6005.config_full_output_mode()
+    ret = dtof64x8.config_measure_mode()
     print(f"Config Full Output Mode: {'Success' if ret else 'Failed'}")
   elif demo_mode == 1:
     # Configure to single line mode (Line 4, all 64 points)
-    # config_single_line_mode(line, start_point, end_point)
-    ret = wy6005.config_single_line_mode(4, 1, 64)
+    ret = dtof64x8.config_measure_mode(4)
     print(f"Config Single Line Mode (Line 4): {'Success' if ret else 'Failed'}")
   elif demo_mode == 2:
     # Configure to single point mode (Line 4, Point 32)
-    # config_single_point_mode(line, point)
-    ret = wy6005.config_single_point_mode(4, 32)
+    ret = dtof64x8.config_measure_mode(4, 32)
     print(f"Config Single Point Mode (Line 4, Point 32): {'Success' if ret else 'Failed'}")
 
 
 def loop():
   # Trigger acquisition of one frame
   # returns lists: x, y, z, intensity
-  list_x, list_y, list_z, list_i = wy6005.trigger_get_raw(timeout_ms=1000)
+  list_x, list_y, list_z, list_i = dtof64x8.get_data(timeout_ms=1000)
 
   if len(list_x) > 0:
     print(f"Received {len(list_x)} points")
@@ -84,5 +78,5 @@ if __name__ == "__main__":
     while True:
       loop()
   except KeyboardInterrupt:
-    wy6005.close()
+    dtof64x8.close()
     print("Program stopped")

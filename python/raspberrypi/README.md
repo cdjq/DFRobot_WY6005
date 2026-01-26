@@ -1,14 +1,14 @@
-# DFRobot_WY6005
+# DFRobot_64x8DTOF
 
 * [中文版](./README_CN.md)
 
-The DFRobot WY6005 is a high-precision 3D ToF (Time of Flight) sensor module providing dense distance point-cloud output over a serial interface. This document describes using the WY6005 Python driver on Raspberry Pi.
+The DFRobot 64x8DTOF is a high-precision 3D ToF (Time of Flight) sensor module providing dense distance point-cloud output over a serial interface. This document describes using the 64x8DTOF Python driver on Raspberry Pi.
 
 ## Product Link
-[WY6005 ToF Sensor](https://www.dfrobot.com/)
+[64x8DTOF ToF Sensor](https://www.dfrobot.com/)
 
 ```text
-SKU: WY6005
+SKU: 64x8DTOF
 ```
 
 ## Table of Contents
@@ -22,43 +22,52 @@ SKU: WY6005
 
 ## Summary
 
-This Python package provides a simple interface to configure the WY6005 sensor, select output mode, trigger frames and read raw X/Y/Z/I point data from the device via serial.
+This Python package provides a simple interface to configure the 64x8DTOF sensor, select output mode, trigger frames and read raw X/Y/Z/I point data from the device via serial.
 
 ## Installation
 
-1. Ensure `pyserial` is installed:
+To use this library, first download the library to your Raspberry Pi, then open the example folder. To run an example demox.py, enter `python demox.py` in the command line. For example, to run the 01. full_output_demo.py example, you need to enter:
 
 ```bash
-pip install pyserial
+python 01. full_output_demo.py
 ```
 
-2. Connect the WY6005 to the Raspberry Pi UART (`/dev/serial0` recommended) or use a USB-serial adapter.
-
-## Usage
-
-Example usage (adjust `port` and `baudrate` as needed):
+## Methods
 
 ```python
-from DFRobot_WY6005 import DFRobot_WY6005
-import time
+def config_frame_mode(self, mode):
+    """Set the sensor frame mode.
+    @details Configure whether the sensor operates in single-frame or continuous mode.
+    @param mode: Use the class constants FRAME_MODE_SINGLE or FRAME_MODE_CONTINUOUS.
+    @return bool: True on success, False on failure.
+    @retval True Configuration successful
+    @retval False Configuration failed
+    """
 
-wy = DFRobot_WY6005(port="/dev/serial0", baudrate=921600)
+def config_measure_mode(self, *args):
+    """Configure measurement output mode.
+    @details Set which points/lines the sensor outputs based on variable arguments.
+    @param *args: Variable arguments for mode selection:
+    @n - no args -> full output (all points)
+    @n - (line,) -> single line mode (line: 1..8)
+    @n - (line, point) -> single point mode (line:1..8, point:0..63)
+    @return bool: True on success, False on failure.
+    @retval True Configuration successful
+    @retval False Configuration failed
+    """
 
-# Configure single-frame mode and set demo mode
-wy.config_single_frame_mode()
-wy.config_full_output_mode()  # or config_single_line_mode(...), config_single_point_mode(...)
-
-while True:
-    list_x, list_y, list_z, list_i = wy.trigger_get_raw(timeout_ms=1000)
-    if len(list_x) > 0:
-        print(f"Received {len(list_x)} points")
-        for idx in range(len(list_x)):
-            print(f"Pt[{idx}] X:{list_x[idx]} Y:{list_y[idx]} Z:{list_z[idx]} I:{list_i[idx]}")
-    else:
-        print("No data or timeout")
-    time.sleep(1)
-
-wy.close()
+def get_data(self, timeout_ms=500):
+    """Trigger one frame and read raw X/Y/Z/intensity arrays.
+    @details This method will:
+    @n 1. Flush the serial input buffer.
+    @n 2. Trigger a single frame using the device command.
+    @n 3. Wait for the sync sequence and then read N * DTOF64X8_POINT_DATA_SIZE bytes, where N is the configured total_points.
+    @n 4. Parse each point using little-endian signed 16-bit integers (struct.unpack_from('<hhhh')) yielding (x, y, z, intensity) per point.
+    @param timeout_ms: Timeout in milliseconds to wait for frame sync and payload.
+    @return tuple: (x_list, y_list, z_list, intensity_list); returns four empty lists on timeout or error.
+    @retval (x_list, y_list, z_list, intensity_list): On success, four lists of equal length N containing parsed values.
+    @retval ([], [], [], []): On timeout waiting for sync or if the payload length does not match expected size.
+    """
 ```
 
 ## Compatibility

@@ -1,15 +1,15 @@
 /*!
- * @file DFRobot_WY6005.h
- * @brief DFRobot_WY6005 class infrastructure
+ * @file DFRobot_64x8DTOF.h
+ * @brief DFRobot_64x8DTOF class infrastructure
  * @copyright  Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
  * @license The MIT License (MIT)
  * @author [PLELES] (https://github.com/PLELES)
  * @version V1.0
  * @date 2026-1-21
- * @url https://github.com/DFRobot/DFRobot_WY6005
+ * @url https://github.com/DFRobot/DFRobot_64x8DTOF
  */
-#ifndef _DFROBOT_WY6005_H_
-#define _DFROBOT_WY6005_H_
+#ifndef _DFROBOT_64X8DTOF_H_
+#define _DFROBOT_64X8DTOF_H_
 
 #include <Arduino.h>
 #define ENABLE_DBG
@@ -30,18 +30,18 @@
 #define DBG(...)
 #endif
 
-#define WY6005_RESPONSE_TIMEOUT    500 /*!< Response timeout in milliseconds */
-#define WY6005_MAX_RETRY_COUNT     5   /*!< Maximum number of retries for commands */
-#define WY6005_RESPONSE_OK_SEQ_LEN 4   /*!< Length of OK response sequence */
-#define WY6005_SYNC_BYTE_0         0x0A
-#define WY6005_SYNC_BYTE_1         0x4F
-#define WY6005_SYNC_BYTE_2         0x4B
-#define WY6005_SYNC_BYTE_3         0x0A
-#define WY6005_FRAME_HEADER_SIZE   4
-#define WY6005_POINT_DATA_SIZE     8
-#define WY6005_MAX_POINTS          (64 * 8)
+#define DTOF64X8_RESPONSE_TIMEOUT    500 /*!< Response timeout in milliseconds */
+#define DTOF64X8_MAX_RETRY_COUNT     5   /*!< Maximum number of retries for commands */
+#define DTOF64X8_RESPONSE_OK_SEQ_LEN 4   /*!< Length of OK response sequence */
+#define DTOF64X8_SYNC_BYTE_0         0x0A
+#define DTOF64X8_SYNC_BYTE_1         0x4F
+#define DTOF64X8_SYNC_BYTE_2         0x4B
+#define DTOF64X8_SYNC_BYTE_3         0x0A
+#define DTOF64X8_FRAME_HEADER_SIZE   4
+#define DTOF64X8_POINT_DATA_SIZE     8
+#define DTOF64X8_MAX_POINTS          (64 * 8)
 
-class DFRobot_WY6005 {
+class DFRobot_64x8DTOF {
 private:
   HardwareSerial* _serial; /*!< Hardware serial port */
   uint32_t        _config; /*!< Serial port configuration */
@@ -79,6 +79,15 @@ private:
   bool setFrameMode(bool continuousMode);
 
   /**
+   * @fn saveConfig
+   * @brief Save configuration to sensor
+   * @return Whether the operation was successful
+   * @retval true: Success
+   * @retval false: Failure
+   */
+  bool saveConfig(void);
+
+  /**
    * @fn setOutputLineData
    * @brief Set output line data
    * @param line Line number
@@ -89,6 +98,32 @@ private:
    * @retval false: Failure
    */
   bool setOutputLineData(uint8_t line, uint8_t startPoint, uint8_t endPoint);
+
+  /**
+   * @fn parsePointData
+   * @brief Parse point data
+   * @param pointData Point data to parse
+   * @param x X-axis coordinate
+   * @param y Y-axis coordinate
+   * @param z Z-axis coordinate (Distance)
+   * @param i Intensity
+   */
+  void parsePointData(const uint8_t* pointData, int16_t* x, int16_t* y, int16_t* z, int16_t* i);
+
+  /**
+   * @fn triggerOneFrame
+   * @brief Trigger one frame data output
+   * @return Whether the operation was successful
+   * @retval true: Success
+   * @retval false: Failure
+   */
+  bool triggerOneFrame(void);
+
+  /**
+   * @fn clearBuffer
+   * @brief Clear serial receive buffer
+   */
+  void clearBuffer(void);
 
   int _startPoint;  /*!< Start point */
   int _endPoint;    /*!< End point */
@@ -116,24 +151,24 @@ public:
 
   /**
    * @struct sPoint_t
-   * @brief WY6005 sensor point data structure
+   * @brief DFRobot 64x8DTOF sensor point data structure
    */
   typedef struct {
-    int16_t xBuf[WY6005_MAX_POINTS]; /*!< X-axis coordinate buffer */
-    int16_t yBuf[WY6005_MAX_POINTS]; /*!< Y-axis coordinate buffer */
-    int16_t zBuf[WY6005_MAX_POINTS]; /*!< Z-axis coordinate buffer (Distance) */
-    int16_t iBuf[WY6005_MAX_POINTS]; /*!< Intensity buffer */
+    int16_t xBuf[DTOF64X8_MAX_POINTS]; /*!< X-axis coordinate buffer */
+    int16_t yBuf[DTOF64X8_MAX_POINTS]; /*!< Y-axis coordinate buffer */
+    int16_t zBuf[DTOF64X8_MAX_POINTS]; /*!< Z-axis coordinate buffer (Distance) */
+    int16_t iBuf[DTOF64X8_MAX_POINTS]; /*!< Intensity buffer */
   } sPoint_t;
 
   /**
-   * @fn DFRobot_WY6005
+  * @fn DFRobot_64x8DTOF
    * @brief Constructor, passing in serial port and configuration
    * @param serial Hardware serial port pointer
    * @param config Serial port configuration (e.g., SERIAL_8N1)
    * @param rxPin RX pin number
    * @param txPin TX pin number
    */
-  DFRobot_WY6005(HardwareSerial& serial, uint32_t config, int8_t rxPin, int8_t txPin);
+  DFRobot_64x8DTOF(HardwareSerial& serial, uint32_t config, int8_t rxPin, int8_t txPin);
 
   /**
    * @fn begin
@@ -143,73 +178,48 @@ public:
   void begin(uint32_t baudRate);
 
   /**
-   * @fn clearBuffer
-   * @brief Clear serial receive buffer
-   */
-  void clearBuffer(void);
-
-  /**
-   * @fn parsePointData
-   * @brief Parse point data
-   * @param pointData Point data to parse
-   * @param x X-axis coordinate
-   * @param y Y-axis coordinate
-   * @param z Z-axis coordinate (Distance)
-   * @param i Intensity
-   */
-  void parsePointData(const uint8_t* pointData, int16_t* x, int16_t* y, int16_t* z, int16_t* i);
-
-  /**
    * @fn getPointData
    * @brief Trigger one frame and read raw x/y/z values (no filtering)
-   * @param xBuf Buffer for x values 
-   * @param yBuf Buffer for y values 
-   * @param zBuf Buffer for z values 
-   * @param iBuf Buffer for i values 
-   * @param maxPoints Maximum points to parse (caller buffer length)
    * @param timeoutMs Timeout in milliseconds to wait for a complete frame
-   * @return Number of points parsed, or -1 on error/timeout
+   * @return Number of points parsed, or -1 on error/timeout,-2 sizeout
    */
-  int getPointData(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, int16_t* iBuf,uint32_t timeoutMs);
-
-  /**
-   * @fn triggerOneFrame
-   * @brief Trigger one frame data output
-   * @return Whether the operation was successful
-   * @retval true: Success
-   * @retval false: Failure
-   */
-  bool triggerOneFrame(void);
-
-  /**
-   * @fn saveConfig
-   * @brief Save configuration to sensor
-   * @return Whether the operation was successful
-   * @retval true: Success
-   * @retval false: Failure
-   */
-  bool saveConfig(void);
+  int getData(uint32_t timeoutMs = 500);
 
   /**
    * @fn configMeasureMode
-   * @brief Configure measurement output mode
-   * @param mode Measurement mode (eMeasureMode_t)
-   * @param arg1 For single-point: line (1..8). For single-line: line (1..8).
-   * @param arg2 For single-point: point index (0..64). Ignored for other modes.
-   * @return bool type, indicates the configuration status
-   * @retval true Configuration successful
-   * @retval false Configuration failed
+   * @brief Configure measurement output mode — Full output (all points).
+   * @return bool True if configuration succeeded and stream control restored,
+   *              false on communication error or device rejection.
    */
-  bool configMeasureMode(eMeasureMode_t mode, uint8_t arg1 = 0, uint8_t arg2 = 0);
+  bool configMeasureMode(void);
+
+  /**
+   * @fn configMeasureMode
+   * @brief Configure measurement output mode — Single line.
+   * @param lineNum Line index to output (1..8).
+   * @return bool True if configuration succeeded and stream control restored,
+   *              false on communication error or invalid arguments.
+   */
+  bool configMeasureMode(uint8_t lineNum);
+
+  /**
+   * @fn configMeasureMode
+   * @brief Configure measurement output mode — Single point..
+   * @param lineNum Line index containing the point (1..8).
+   * @param pointNum Point index within the line (0..64).
+   * @return bool True if configuration succeeded and stream control restored,
+   *              false on communication error or invalid arguments.
+   */
+  bool configMeasureMode(uint8_t lineNum, uint8_t pointNum);
 
   /**
    * @fn configFrameMode
    * @brief Configure frame mode (single frame or continuous)
-  * @param mode Frame mode (eFrameSingle or eFrameContinuous)
-  * @return bool type, indicates the configuration status
-  * @retval true Configuration successful
-  * @retval false Configuration failed
-  */
+   * @param mode Frame mode (eFrameSingle or eFrameContinuous)
+   * @return bool type, indicates the configuration status
+   * @retval true Configuration successful
+   * @retval false Configuration failed
+   */
   bool configFrameMode(eFrameMode_t mode);
 
   sPoint_t point; /*!< Point data */

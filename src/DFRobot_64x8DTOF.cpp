@@ -1,28 +1,28 @@
 /*!
- * @file DFRobot_WY6005.cpp
- * @brief DFRobot_WY6005 class implementation
+ * @file DFRobot_64x8DTOF.cpp
+ * @brief DFRobot_64x8DTOF class implementation
  * @copyright  Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
  * @license The MIT License (MIT)
  * @author [PLELES] (https://github.com/PLELES)
  * @version V1.0
  * @date 2026-1-21
- * @url https://github.com/DFRobot/DFRobot_WY6005
+ * @url https://github.com/DFRobot/DFRobot_64x8DTOF
  */
-#include "DFRobot_WY6005.h"
+#include "DFRobot_64x8DTOF.h"
 
-DFRobot_WY6005::DFRobot_WY6005(HardwareSerial& serial, uint32_t config, int8_t rxPin, int8_t txPin)
+DFRobot_64x8DTOF::DFRobot_64x8DTOF(HardwareSerial& serial, uint32_t config, int8_t rxPin, int8_t txPin)
 {
   _serial = &serial;
   _config = config;
   _rxPin  = rxPin;
   _txPin  = txPin;
-  DBG("WY6005 initialized with serial port (by reference), config=0x%lx, rxPin=%d, txPin=%d", config, rxPin, txPin);
+  DBG("64x8DTOF initialized with serial port (by reference), config=0x%lx, rxPin=%d, txPin=%d", config, rxPin, txPin);
   _startPoint  = 0;
   _endPoint    = 0;
   _totalPoints = 0;
 }
 
-void DFRobot_WY6005::begin(uint32_t baudRate)
+void DFRobot_64x8DTOF::begin(uint32_t baudRate)
 {
   //115200 baud rate is not supported now only support 921600
   if (baudRate == 115200) {
@@ -54,13 +54,12 @@ void DFRobot_WY6005::begin(uint32_t baudRate)
   DBG("Serial port started with baud rate: %lu", baudRate);
 }
 
-void DFRobot_WY6005::clearBuffer(void)
+void DFRobot_64x8DTOF::clearBuffer(void)
 {
   while(_serial->available()) _serial->read();
-  delay(300);
 }
 
-bool DFRobot_WY6005::sendCommand(const String& command)
+bool DFRobot_64x8DTOF::sendCommand(const String& command)
 {
   DBG("Sending command: %s", command.c_str());
   _serial->print(command);
@@ -68,70 +67,91 @@ bool DFRobot_WY6005::sendCommand(const String& command)
   return true;
 }
 
-bool DFRobot_WY6005::setStreamControl(bool enable)
+bool DFRobot_64x8DTOF::setStreamControl(bool enable)
 {
   String command = "AT+STREAM_CONTROL=" + String(enable ? "1" : "0");
   return sendCommand(command);
 }
 
-bool DFRobot_WY6005::setFrameMode(bool continuousMode)
+bool DFRobot_64x8DTOF::setFrameMode(bool continuousMode)
 {
   String command = "AT+SPAD_FRAME_MODE=" + String(continuousMode ? "1" : "0");
   return sendCommand(command);
 }
 
-bool DFRobot_WY6005::setOutputLineData(uint8_t line, uint8_t startPoint, uint8_t endPoint)
+bool DFRobot_64x8DTOF::setOutputLineData(uint8_t line, uint8_t startPoint, uint8_t endPoint)
 {
   String command = "AT+SPAD_OUTPUT_LINE_DATA=" + String(line) + "," + String(startPoint) + "," + String(endPoint);
   return sendCommand(command);
 }
 
-bool DFRobot_WY6005::triggerOneFrame(void)
+bool DFRobot_64x8DTOF::triggerOneFrame(void)
 {
   String command = "AT+SPAD_TRIG_ONE_FRAME=1";
   return sendCommand(command);
 }
 
-bool DFRobot_WY6005::saveConfig(void)
+bool DFRobot_64x8DTOF::saveConfig(void)
 {
   String command = "AT+SAVE_CONFIG";
   return sendCommand(command);
 }
 
-
-bool DFRobot_WY6005::configMeasureMode(eMeasureMode_t mode, uint8_t arg1, uint8_t arg2)
+bool DFRobot_64x8DTOF::configMeasureMode(uint8_t lineNum)
 {
   if (!setStreamControl(false)) return false;
   delay(700);
 
-  if (mode == eMeasureModeSinglePoint) {
-    // arg1: Line, arg2: Point
-    DBG("Config: Single Point, Line: %d, Point: %d", arg1, arg2);
-    if (!setOutputLineData(arg1, arg2, arg2)) return false;
-    _totalPoints = 1;
-  } 
-  else if (mode == eMeasureModeSingleLine) {
-    // arg1: Line. Start: 1, End: 64
-    DBG("Config: Single Line, Line: %d", arg1);
-    if (!setOutputLineData(arg1, 1, 64)) return false;
-    _totalPoints = 64;
-  }
-  else if (mode == eMeasureModeFull) {
-    if(!setOutputLineData(0, 0, 0)) return false;
-    _totalPoints = WY6005_MAX_POINTS;
-    DBG("Config: Full Mode");
-  }
-
+  if(!setOutputLineData(lineNum, 1, 64)) return false;
+  _totalPoints = 64;
+  DBG("Config: Single Line, Line: %d", lineNum);
   delay(700);
+
   if (!saveConfig()) {
     DBG("Warning: saveConfig failed");
   }
+
   delay(700);
   return setStreamControl(true);
 }
 
 
-bool DFRobot_WY6005::configFrameMode(eFrameMode_t mode)
+bool DFRobot_64x8DTOF::configMeasureMode(uint8_t lineNum, uint8_t pointNum)
+{
+  if (!setStreamControl(false)) return false;
+  delay(700);
+
+  if (!setOutputLineData(lineNum, pointNum, pointNum)) return false;
+  _totalPoints = 1;
+  DBG("Config: Single Point, Line: %d, Point: %d", lineNum, pointNum);
+  delay(700);
+
+  if (!saveConfig()) {
+    DBG("Warning: saveConfig failed");
+  }
+  return setStreamControl(true);
+
+}
+
+bool DFRobot_64x8DTOF::configMeasureMode(void)
+{
+  if (!setStreamControl(false)) return false;
+  delay(700);
+
+  if(!setOutputLineData(0, 0, 0)) return false;
+  _totalPoints = DTOF64X8_MAX_POINTS;
+  DBG("Config: Full Mode");
+  delay(700);
+
+  if (!saveConfig()) {
+    DBG("Warning: saveConfig failed");
+  }
+  delay(700);
+  return setStreamControl(true);
+
+}
+
+bool DFRobot_64x8DTOF::configFrameMode(eFrameMode_t mode)
 {
   DBG("Configuring frame mode: %d", mode);
 
@@ -150,7 +170,7 @@ bool DFRobot_WY6005::configFrameMode(eFrameMode_t mode)
   return setStreamControl(true);
 }
 
-void DFRobot_WY6005::parsePointData(const uint8_t* pointData, int16_t* x, int16_t* y, int16_t* z, int16_t* i)
+void DFRobot_64x8DTOF::parsePointData(const uint8_t* pointData, int16_t* x, int16_t* y, int16_t* z, int16_t* i)
 {
   *x = (int16_t)((pointData[1] << 8) | pointData[0]);
   *y = (int16_t)((pointData[3] << 8) | pointData[2]);
@@ -158,12 +178,12 @@ void DFRobot_WY6005::parsePointData(const uint8_t* pointData, int16_t* x, int16_
   *i = (int16_t)((pointData[7] << 8) | pointData[6]);
 }
 
-int DFRobot_WY6005::getPointData(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, int16_t* iBuf, uint32_t timeoutMs)
+int DFRobot_64x8DTOF::getData(uint32_t timeoutMs)
 {
   // Decide how many points to read: prefer configured _totalPoints if set, otherwise use maxPoints
   int       points          = _totalPoints;
-  const int headerSize      = WY6005_FRAME_HEADER_SIZE;
-  const int pointDataSize   = WY6005_POINT_DATA_SIZE;
+  const int headerSize      = DTOF64X8_FRAME_HEADER_SIZE;
+  const int pointDataSize   = DTOF64X8_POINT_DATA_SIZE;
   int       expectedDataLen = points * pointDataSize;
   int       totalFrameSize  = headerSize + expectedDataLen;
 
@@ -195,7 +215,7 @@ int DFRobot_WY6005::getPointData(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, in
           for (int i = 0; i < points; i++) {
             int      pIdx  = headerSize + i * pointDataSize;
             uint8_t* pData = &frameBuffer[pIdx];
-            parsePointData(pData, &xBuf[i], &yBuf[i], &zBuf[i], &iBuf[i]);
+            parsePointData(pData, &point.xBuf[i], &point.yBuf[i], &point.zBuf[i], &point.iBuf[i]);
           }
           return points;
         }
@@ -203,34 +223,34 @@ int DFRobot_WY6005::getPointData(int16_t* xBuf, int16_t* yBuf, int16_t* zBuf, in
         // State machine for header validation (0x0A, 0x4F, 0x4B, 0x0A)
         switch (frameIndex) {
           case 0:
-            if (c == WY6005_SYNC_BYTE_0)
+            if (c == DTOF64X8_SYNC_BYTE_0)
               frameBuffer[frameIndex++] = c;
             break;
           case 1:
-            if (c == WY6005_SYNC_BYTE_1) {
+            if (c == DTOF64X8_SYNC_BYTE_1) {
               frameBuffer[frameIndex++] = c;
             } else {
               frameIndex = 0;
-              if (c == WY6005_SYNC_BYTE_0)
+              if (c == DTOF64X8_SYNC_BYTE_0)
                 frameBuffer[frameIndex++] = c;
             }
             break;
           case 2:
-            if (c == WY6005_SYNC_BYTE_2) {
+            if (c == DTOF64X8_SYNC_BYTE_2) {
               frameBuffer[frameIndex++] = c;
             } else {
               frameIndex = 0;
-              if (c == WY6005_SYNC_BYTE_0)
+              if (c == DTOF64X8_SYNC_BYTE_0)
                 frameBuffer[frameIndex++] = c;
             }
             break;
           case 3:
-            if (c == WY6005_SYNC_BYTE_3) {
+            if (c == DTOF64X8_SYNC_BYTE_3) {
               frameBuffer[frameIndex++] = c;
               inSyncMode                = true;
             } else {
               frameIndex = 0;
-              if (c == WY6005_SYNC_BYTE_0)
+              if (c == DTOF64X8_SYNC_BYTE_0)
                 frameBuffer[frameIndex++] = c;
             }
             break;
