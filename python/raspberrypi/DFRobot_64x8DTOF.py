@@ -39,6 +39,19 @@ class DFRobot_64x8DTOF:
     self.ser = serial.Serial(port=port, baudrate=baudrate, timeout=timeout)
     self.total_points = self.DTOF64X8_MAX_POINTS
 
+  def begin(self):
+    '''
+    @fn begin
+    @brief Initialize the sensor serial port and enable data stream
+    @return bool: True if initialization succeeded, False otherwise
+    '''
+    if self.ser.baudrate != 921600:
+      return False
+    time.sleep(0.4)
+    if not self._set_stream_control(True):
+      return False
+    return True
+
   def close(self):
     '''
     @fn close
@@ -55,9 +68,10 @@ class DFRobot_64x8DTOF:
     @param command: Command string to send.
     @return bool: True if command sent successfully.
     '''
+    self.ser.reset_input_buffer()
     cmd = (command + "\n").encode("ascii")
     self.ser.write(cmd)
-    return True
+    return self._find_sync(1.0)
 
   
   def _set_stream_control(self, enable):
@@ -235,6 +249,7 @@ class DFRobot_64x8DTOF:
       - no args -> full output mode
       - (line,) -> single line mode (line: 1..8)
       - (line, point) -> single point mode (line:1..8, point:1-64)
+      - (line, start_point, end_point) -> multi point mode (line:1..8, start:1..64, end:1..64)
     @return bool: True if configuration successful.
     '''
     if len(args) == 0:
@@ -246,7 +261,12 @@ class DFRobot_64x8DTOF:
       line = int(args[0])
       point = int(args[1])
       return self._config_single_point_mode(line, point)
-    raise TypeError('config_measure_mode accepts 0,1 or 2 arguments')
+    if len(args) == 3:
+      line = int(args[0])
+      start_point = int(args[1])
+      end_point = int(args[2])
+      return self._config_single_line_mode(line, start_point, end_point)
+    raise TypeError('config_measure_mode accepts 0, 1, 2 or 3 arguments')
 
 
 
@@ -257,37 +277,36 @@ class DFRobot_64x8DTOF:
     @param timeout_ms: Timeout to wait for a frame (ms).
     @return tuple of lists (x, y, z, intensity); empty lists if timeout/error.
     '''
-    points = self.total_points
-    point_bytes = points * self.DTOF64X8_POINT_DATA_SIZE
-    # total_size should only be the data size (header handled by _find_sync)
-    total_size = point_bytes
-
-    # Flush buffer to avoid stale data
-    self.ser.reset_input_buffer()
-
     # Try multiple attempts to get sync
     max_retries = 3
     for attempt in range(max_retries):
-      self._trigger_one_frame()
-      if self._find_sync(timeout_ms / 1000.0):
+      if self._trigger_one_frame():
         break
       if attempt == max_retries - 1:
         return [], [], [], []
 
-    payload = self.ser.read(total_size)
-    if len(payload) != total_size:
-      return [], [], [], []
-
+    points = self.total_points
     x_list = []
     y_list = []
     z_list = []
     i_list = []
+    
+    start_time = time.time()
+    timeout_s = timeout_ms / 1000.0
 
     for i in range(points):
-      offset = i * self.DTOF64X8_POINT_DATA_SIZE
-      if offset + self.DTOF64X8_POINT_DATA_SIZE > len(payload):
-        break
-      val_x, val_y, val_z, val_i = struct.unpack_from('<hhhh', payload, offset)
+      point_data = bytearray()
+      while len(point_data) < self.DTOF64X8_POINT_DATA_SIZE:
+        if (time.time() - start_time) > timeout_s:
+          return [], [], [], []
+        
+        if self.ser.in_waiting:
+          needed = self.DTOF64X8_POINT_DATA_SIZE - len(point_data)
+          chunk = self.ser.read(min(self.ser.in_waiting, needed))
+          if chunk:
+            point_data.extend(chunk)
+
+      val_x, val_y, val_z, val_i = struct.unpack('<hhhh', point_data)
       x_list.append(val_x)
       y_list.append(val_y)
       z_list.append(val_z)

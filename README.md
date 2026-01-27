@@ -10,7 +10,7 @@ The sensor includes built-in signal processing capabilities and supports various
 [64x8DTOF DToF Sensor](https://www.dfrobot.com/)
 
 ```text
-SKU: 64x8DTOF
+SKU: SEN0682
 ```
 
 ## Table of Contents
@@ -45,10 +45,12 @@ DFRobot_64x8DTOF(HardwareSerial &serial, uint32_t config, int8_t rxPin, int8_t t
 
 /**
  * @fn begin
- * @brief Initialize the sensor serial port
- * @param baudRate Serial communication baud rate
+ * @brief Initialize the sensor serial port and enable data stream
+ * @param baudRate Serial communication baud rate (must be 921600)
+ * @return bool True if initialization succeeded (serial started and stream enabled), false otherwise
+ * @note ESP8266 and AVR (UNO) platforms are not supported by this library's current implementation.
  */
-void begin(uint32_t baudRate);
+bool begin(uint32_t baudRate = 921600);
 
 /**
  * @fn getData
@@ -86,6 +88,17 @@ bool configMeasureMode(uint8_t lineNum);
 bool configMeasureMode(uint8_t lineNum, uint8_t pointNum);
 
 /**
+ * @fn configMeasureMode
+ * @brief Configure measurement output mode — Multi-point.
+ * @param lineNum Line index (1..8)
+ * @param startPoint Start point index within the line (1..64)
+ * @param endPoint End point index within the line (1..64), must be >= startPoint
+ * @return bool True if configuration succeeded and stream control restored,
+ *              false on communication error or invalid arguments.
+ */
+bool configMeasureMode(uint8_t lineNum, uint8_t startPoint, uint8_t endPoint);
+
+/**
  * @fn configFrameMode
  * @brief Configure whether sensor runs in single-frame or continuous frame mode
  * @param mode Frame mode (eFrameSingle or eFrameContinuous)
@@ -98,12 +111,21 @@ bool configFrameMode(eFrameMode_t mode);
 
 <!-- Raspberry Pi Python usage removed as requested -->
 
+**Note:** Continuous frame mode is not implemented yet; do not use it.
+
+**Note:** The sensor currently only supports baud rate 921600; other baud rates are not supported.
+
+
 ## Compatibility
 | Platform | Work Well | Work Wrong | Untested | Remarks |
 |----------|-----------|------------|----------|---------|
 | Arduino UNO |  |√| | |
-| Arduino MEGA2560 | √ | | | |
-| ESP32 | √ | | | Use Serial1 |
+| Arduino MEGA2560 |  | |√| |
+| Arduino Leonardo |  | | √ | |
+| FireBeeetle-M0 |  | | √ | |
+| FireBeeetle-ESP32-E |  √| |  | |
+| ESP8266 |  |√  | | |
+| Micro:bit |  | | √ | |
 
 ## History
 - Date: 2026-1-26

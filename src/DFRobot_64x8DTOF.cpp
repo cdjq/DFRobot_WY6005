@@ -22,36 +22,47 @@ DFRobot_64x8DTOF::DFRobot_64x8DTOF(HardwareSerial& serial, uint32_t config, int8
   _totalPoints = 0;
 }
 
-void DFRobot_64x8DTOF::begin(uint32_t baudRate)
+bool DFRobot_64x8DTOF::begin(uint32_t baudRate)
 {
-  //115200 baud rate is not supported now only support 921600
-  if (baudRate == 115200) {
-    DBG("115200 baud rate is not supported");
+  // Not supported platforms: ESP8266 and AVR (UNO)
+  #if defined(ARDUINO_ARCH_ESP8266) || defined(ARDUINO_ARCH_AVR)
+    DBG("Error: platform not supported (ESP8266/AVRUNO)");
+    return false;
+  #endif
+
+  if (baudRate != 921600) {
+    DBG("Error: only 921600 baud rate is supported");
+    return false;
   }
 
-#if defined(ESP32)
-  _serial->begin(baudRate, _config, _rxPin, _txPin);
-#elif defined(ARDUINO_ARCH_ESP8266)
-  // ESP8266 HardwareSerial doesn't support rx/tx pin remap in begin
-  DBG("ESP8266 only supports SoftwareSerial");
-  _serial->begin(baudRate, _config);
-#elif defined(ARDUINO_ARCH_AVR)
-  // AVR (UNO, etc.) only supports begin(baud) or begin(baud, config)
-#if defined(SERIAL_8N1)
-  _serial->begin(baudRate, _config);
-#else
-  _serial->begin(baudRate);
-#endif
-#else
-// Fallback: try two-arg form first, otherwise single arg.
-#if defined(HAVE_HWSERIAL1) || defined(SERIAL_8N1)
-  _serial->begin(baudRate, _config);
-#else
-  _serial->begin(baudRate);
-#endif
-#endif
+  #if defined(ESP32)
+    _serial->begin(baudRate, _config, _rxPin, _txPin);
+  #else
+    // Fallback: try two-arg form first, otherwise single arg.
+  #if defined(HAVE_HWSERIAL1) || defined(SERIAL_8N1)
+    _serial->begin(baudRate, _config);
+  #else
+    _serial->begin(baudRate);
+  #endif
+  #endif
+
   delay(400);
-  DBG("Serial port started with baud rate: %lu", baudRate);
+ 
+  // Try to enable stream on the sensor(3 times); if it fails, device likely not present/responding
+  bool isConnected = false;
+  for (int i = 0; i < 3; i++) {
+    if (setStreamControl(true)) {
+      isConnected = true;
+      break;
+    }
+    delay(100);
+  }
+
+  if (!isConnected) {
+    DBG("Error:64x8DTOF not found or not responding");
+    return false;
+  }
+  return true;
 }
 
 void DFRobot_64x8DTOF::clearBuffer(void)
@@ -61,10 +72,52 @@ void DFRobot_64x8DTOF::clearBuffer(void)
 
 bool DFRobot_64x8DTOF::sendCommand(const String& command)
 {
-  DBG("Sending command: %s", command.c_str());
+  //DBG("Sending command: %s", command.c_str());
+  clearBuffer();
   _serial->print(command);
   _serial->print("\n");
-  return true;
+  
+  uint32_t start = millis();
+  int frameIndex = 0;
+  while((millis() - start) < DTOF64X8_RESPONSE_TIMEOUT){
+     if(_serial->available()){
+        uint8_t c = _serial->read();
+        switch (frameIndex) {
+          case 0:
+            if (c == DTOF64X8_SYNC_BYTE_0)
+              frameIndex++;
+            break;
+          case 1:
+            if (c == DTOF64X8_SYNC_BYTE_1) {
+              frameIndex++;
+            } else {
+              frameIndex = 0;
+              if (c == DTOF64X8_SYNC_BYTE_0)
+                frameIndex++;
+            }
+            break;
+          case 2:
+            if (c == DTOF64X8_SYNC_BYTE_2) {
+              frameIndex++;
+            } else {
+              frameIndex = 0;
+              if (c == DTOF64X8_SYNC_BYTE_0)
+                frameIndex++;
+            }
+            break;
+          case 3:
+            if (c == DTOF64X8_SYNC_BYTE_3) {
+              return true;
+            } else {
+              frameIndex = 0;
+              if (c == DTOF64X8_SYNC_BYTE_0)
+                frameIndex++;
+            }
+            break;
+        }
+     }
+  }
+  return false;
 }
 
 bool DFRobot_64x8DTOF::setStreamControl(bool enable)
@@ -83,15 +136,14 @@ bool DFRobot_64x8DTOF::setOutputLineData(uint8_t line, uint8_t startPoint, uint8
 {
   // Validate line range (0 allowed for global/full configuration)
   if (line > 8) return false;
-  // If line == 0, allow passthrough for device-specific full/global config
-  if (line == 0) {
-    String command = "AT+SPAD_OUTPUT_LINE_DATA=" + String(line) + "," + String(startPoint) + "," + String(endPoint);
-    return sendCommand(command);
+  
+  if (line != 0) {
+    // For per-line configuration, enforce 1..64 indexing for points
+    if (startPoint < 1 || startPoint > 64) return false;
+    if (endPoint < 1 || endPoint > 64) return false;
+    if (endPoint < startPoint) return false;
   }
-  // For per-line configuration, enforce 1..64 indexing for points
-  if (startPoint < 1 || startPoint > 64) return false;
-  if (endPoint < 1 || endPoint > 64) return false;
-  if (endPoint < startPoint) return false;
+
   String command = "AT+SPAD_OUTPUT_LINE_DATA=" + String(line) + "," + String(startPoint) + "," + String(endPoint);
   return sendCommand(command);
 }
@@ -144,6 +196,22 @@ bool DFRobot_64x8DTOF::configMeasureMode(uint8_t lineNum, uint8_t pointNum)
 
 }
 
+bool DFRobot_64x8DTOF::configMeasureMode(uint8_t lineNum, uint8_t startPoint, uint8_t endPoint)
+{
+  if (!setStreamControl(false)) return false;
+  delay(700);
+
+  if (!setOutputLineData(lineNum, startPoint, endPoint)) return false;
+  _totalPoints = endPoint - startPoint + 1;
+  DBG("Config: Multi Points, Line: %d, Start: %d, End: %d", lineNum, startPoint, endPoint);
+  delay(700);
+
+  if (!saveConfig()) {
+    DBG("Warning: saveConfig failed");
+  }
+  return setStreamControl(true);
+}
+
 bool DFRobot_64x8DTOF::configMeasureMode(void)
 {
   if (!setStreamControl(false)) return false;
@@ -191,83 +259,27 @@ void DFRobot_64x8DTOF::parsePointData(const uint8_t* pointData, int16_t* x, int1
 
 int DFRobot_64x8DTOF::getData(uint32_t timeoutMs)
 {
-  // Decide how many points to read: prefer configured _totalPoints if set, otherwise use maxPoints
-  int       points          = _totalPoints;
-  const int headerSize      = DTOF64X8_FRAME_HEADER_SIZE;
-  const int pointDataSize   = DTOF64X8_POINT_DATA_SIZE;
-  int       expectedDataLen = points * pointDataSize;
-  int       totalFrameSize  = headerSize + expectedDataLen;
+  int points = _totalPoints;
 
-  uint8_t frameBuffer[600];
+  if (!sendCommand("AT+SPAD_TRIG_ONE_FRAME=1")) {
+    return -1;
+  }
 
-  if (totalFrameSize > sizeof(frameBuffer))
-    return -2;
-
-  // Clear buffer before sending trigger command to avoid reading previous responses
-  while(_serial->available()) _serial->read();
-
-  _serial->print("AT+SPAD_TRIG_ONE_FRAME=1");
-  _serial->print("\n");
-
-  uint32_t start      = millis();
-  int      frameIndex = 0;
-  bool     inSyncMode = false;
-
-  while ((millis() - start) < timeoutMs) {
-    if (_serial->available()) {
-      uint8_t c = _serial->read();
-
-      if (inSyncMode) {
-        frameBuffer[frameIndex++] = c;
-
-        // Check if we have received the full frame
-        if (frameIndex == totalFrameSize) {
-          // Parse all points
-          for (int i = 0; i < points; i++) {
-            int      pIdx  = headerSize + i * pointDataSize;
-            uint8_t* pData = &frameBuffer[pIdx];
-            parsePointData(pData, &point.xBuf[i], &point.yBuf[i], &point.zBuf[i], &point.iBuf[i]);
-          }
-          return points;
-        }
-      } else {
-        // State machine for header validation (0x0A, 0x4F, 0x4B, 0x0A)
-        switch (frameIndex) {
-          case 0:
-            if (c == DTOF64X8_SYNC_BYTE_0)
-              frameBuffer[frameIndex++] = c;
-            break;
-          case 1:
-            if (c == DTOF64X8_SYNC_BYTE_1) {
-              frameBuffer[frameIndex++] = c;
-            } else {
-              frameIndex = 0;
-              if (c == DTOF64X8_SYNC_BYTE_0)
-                frameBuffer[frameIndex++] = c;
-            }
-            break;
-          case 2:
-            if (c == DTOF64X8_SYNC_BYTE_2) {
-              frameBuffer[frameIndex++] = c;
-            } else {
-              frameIndex = 0;
-              if (c == DTOF64X8_SYNC_BYTE_0)
-                frameBuffer[frameIndex++] = c;
-            }
-            break;
-          case 3:
-            if (c == DTOF64X8_SYNC_BYTE_3) {
-              frameBuffer[frameIndex++] = c;
-              inSyncMode                = true;
-            } else {
-              frameIndex = 0;
-              if (c == DTOF64X8_SYNC_BYTE_0)
-                frameBuffer[frameIndex++] = c;
-            }
-            break;
-        }
+  uint32_t start = millis();
+  uint8_t pointBuf[DTOF64X8_POINT_DATA_SIZE];
+  
+  for (int i = 0; i < points; i++) {
+    int byteCount = 0;
+    while (byteCount < DTOF64X8_POINT_DATA_SIZE) {
+      if ((millis() - start) > timeoutMs) return -1; 
+      
+      if (_serial->available()) {
+        pointBuf[byteCount++] = _serial->read();
       }
     }
+
+    parsePointData(pointBuf, &point.xBuf[i], &point.yBuf[i], &point.zBuf[i], &point.iBuf[i]);
   }
-  return -1;    // Timeout
+  
+  return points;
 }

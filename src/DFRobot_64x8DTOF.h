@@ -172,10 +172,13 @@ public:
 
   /**
    * @fn begin
-   * @brief Initialize the sensor
-   * @param baudRate Serial communication baud rate
+    * @brief Initialize the sensor serial interface and enable data stream
+    * @param baudRate Serial communication baud rate (must be 921600)
+    * @return bool True if initialization succeeded (serial started and stream enabled), false on error
+    * @note On ESP8266 and AVR (UNO) platforms this function currently returns false (platform not supported).
+    * @note The function will attempt to enable stream control on the device to verify presence.
    */
-  void begin(uint32_t baudRate);
+    bool begin(uint32_t baudRate = 921600);
 
   /**
    * @fn getPointData
@@ -204,18 +207,30 @@ public:
 
   /**
    * @fn configMeasureMode
-  * @brief Configure measurement output mode — Single point.
-  * @param lineNum Line index containing the point (1..8).
-  * @param pointNum Point index within the line (1..64).
+   * @brief Configure measurement output mode — Single point.
+   * @param lineNum Line index containing the point (1..8).
+   * @param pointNum Point index within the line (1..64).
    * @return bool True if configuration succeeded and stream control restored,
    *              false on communication error or invalid arguments.
    */
   bool configMeasureMode(uint8_t lineNum, uint8_t pointNum);
 
   /**
+   * @fn configMeasureMode
+   * @brief Configure measurement output mode — Multiple points within one line.
+   * @param lineNum Line index containing the points (1..8).
+   * @param startPoint Start point index within the line (1..64).
+   * @param endPoint End point index within the line (1..64).
+   * @return bool True if configuration succeeded and stream control restored,
+   *              false on communication error or invalid arguments.
+   */
+  bool configMeasureMode(uint8_t lineNum, uint8_t startPoint, uint8_t endPoint);
+
+  /**
    * @fn configFrameMode
    * @brief Configure frame mode (single frame or continuous)
    * @param mode Frame mode (eFrameSingle or eFrameContinuous)
+   * @note Continuous mode is not implemented yet — do not use it.
    * @return bool type, indicates the configuration status
    * @retval true Configuration successful
    * @retval false Configuration failed

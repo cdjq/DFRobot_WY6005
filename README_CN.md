@@ -8,7 +8,7 @@ DFRobot_64x8DTOF 是一款高精度 DToF（飞行时间）传感器模块，提�
 [64x8DTOF DToF Sensor](https://www.dfrobot.com/)
 
 ```text
-SKU: 64x8DTOF
+SKU: SEN0682
 ```
 
 ## 目录
@@ -28,7 +28,7 @@ SKU: 64x8DTOF
 ### Arduino 库安装
 1. 从仓库下载库文件。
 2. 将库复制到 Arduino 的 `libraries` 目录中。
-3. 打开 `examples` 文件夹中的示例草图并上传测试。
+3. 打开 `examples` 文件夹中的示例并上传测试。
 
 
 ## 方法
@@ -46,10 +46,13 @@ DFRobot_64x8DTOF(HardwareSerial &serial, uint32_t config, int8_t rxPin, int8_t t
 
 /**
  * @fn begin
- * @brief 初始化传感器串口
- * @param baudRate 串口波特率
+ * @brief 初始化传感器串口并开启数据流
+ * @param baudRate 串口波特率（必须为 921600）
+ * @return bool 如果初始化成功（串口启动并且数据流使能），否则返回 false
+ * @note 目前 ESP8266 和 AVR（UNO）平台不被本库支持。
+ * @note `begin()` 会尝试开启设备的数据流以验证设备是否存在。
  */
-void begin(uint32_t baudRate);
+bool begin(uint32_t baudRate = 921600);
 
 /**
  * @fn getData
@@ -84,6 +87,16 @@ bool configMeasureMode(uint8_t lineNum);
 bool configMeasureMode(uint8_t lineNum, uint8_t pointNum);
 
 /**
+ * @fn configMeasureMode
+ * @brief 配置测量输出模式 — 多点
+ * @param lineNum 行索引（1..8）
+ * @param startPoint 行内起始点索引（1..64）
+ * @param endPoint 行内结束点索引（1..64），必须 >= startPoint
+ * @return bool 如果配置成功且流控制恢复则为 true，通信错误或参数无效时为 false
+ */
+bool configMeasureMode(uint8_t lineNum, uint8_t startPoint, uint8_t endPoint);
+
+/**
  * @fn configFrameMode
  * @brief 配置传感器为单帧或连续帧模式
  * @param mode 模式（eFrameSingle 或 eFrameContinuous）
@@ -93,13 +106,20 @@ bool configMeasureMode(uint8_t lineNum, uint8_t pointNum);
  */
 bool configFrameMode(eFrameMode_t mode);
 ```
+**注意：** 连续模式尚未实现，请勿使用。
 
-## 兼容性
-| 平台 | 运行良好 | 运行异常 | 未测试 | 备注 |
-|------|------|------|--------|------|
-| Arduino UNO |  | √ |  |  |
-| Arduino MEGA2560 | √ |  |  |  |
-| ESP32 | √ |  |  | 使用 Serial1 |
+**注意：** 目前仅支持波特率 921600，暂不支持其他波特率。
+
+## Compatibility
+| Platform | Work Well | Work Wrong | Untested | Remarks |
+|----------|-----------|------------|----------|---------|
+| Arduino UNO |  |√| | |
+| Arduino MEGA2560 |  | |√| |
+| Arduino Leonardo |  | | √ | |
+| FireBeeetle-M0 |  | | √ | |
+| FireBeeetle-ESP32-E |  √| |  | |
+| ESP8266 |  |√  | | |
+| Micro:bit |  | | √ | |
 
 ## 历史
 - Date: 2026-1-26

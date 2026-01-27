@@ -8,7 +8,7 @@
 [64x8DTOF ToF Sensor](https://www.dfrobot.com/)
 
 ```text
-SKU: 64x8DTOF
+SKU: SEN0682
 ```
 
 ## 目录
@@ -29,7 +29,7 @@ SKU: 64x8DTOF
 要使用这个库，首先将库下载到Raspberry Pi，然后打开例程文件夹。要执行一个例程demox.py，请在命令行中输入python demox.py。例如，要执行01. full_output_demo.py例程，你需要输入:
 
 ```bash
-python 01. full_output_demo.py
+python 01.full_output_demo.py
 ```
 
 ## 方法
@@ -51,9 +51,20 @@ def config_measure_mode(self, *args):
     @n - 无参数 -> 全点输出（所有点）
     @n - (line,) -> 单线模式（line: 1..8）
     @n - (line, point) -> 单点模式（line:1..8, point:1-64）
+    @n - (line, start_point, end_point) -> 多点模式（line:1..8, start:1..64, end:1..64），用于配置同一行上的一段连续点输出
     @return bool: 成功返回 True，失败返回 False。
     @retval True 配置成功
     @retval False 配置失败
+    """
+
+def begin(self):
+    """初始化串口并开启传感器数据流。
+    @details
+    - 检查已配置的波特率是否为 921600（库默认）；不是则返回 False。
+    - 等待约 0.4 秒以让串口稳定。
+    - 调用内部方法 `_set_stream_control(True)` 尝试开启传感器数据流。
+    - 返回 True 表示成功开启并准备就绪，返回 False 表示初始化或开启流失败。
+    @return bool: 初始化并开启数据流成功返回 True，否则返回 False。
     """
 
 def get_data(self, timeout_ms=500):

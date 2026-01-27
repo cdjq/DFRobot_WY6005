@@ -31,15 +31,25 @@ except serial.SerialException as e:
 def setup():
   print("DFRobot_64x8DTOF init...")
 
-  # Configure to single frame mode
-  ret = dtof64x8.config_frame_mode(dtof64x8.FRAME_MODE_SINGLE)
-  print(f"Config Single Frame Mode: {'Success' if ret else 'Failed'}")
+  if not dtof64x8.begin():
+    print("Beginning sensor failed!")
+    sys.exit(1)
 
-  # Configure to single line mode (Line 4, all 64 points)
-  ret = dtof64x8.config_measure_mode(4)
-  print(f"Config Single Line Mode (Line 4): {'Success' if ret else 'Failed'}")
+  # Configure to single frame mode (retry until success)
+  print("Configuring frame mode: Single Frame...")
+  while not dtof64x8.config_frame_mode(dtof64x8.FRAME_MODE_SINGLE):
+    print("Config Single Frame Mode failed, retrying...")
+    time.sleep(0.2)
+  print("Config Single Frame Mode: Success")
 
-  time.sleep(0.5)
+  # Configure to single line mode (Line 4, all 64 points) (retry until success)
+  print("Configuring Single Line Mode (Line 4)...")
+  while not dtof64x8.config_measure_mode(4):
+    print("Config Single Line Mode failed, retrying...")
+    time.sleep(0.2)
+  print("Config Single Line Mode (Line 4): Success")
+
+  time.sleep(2)
 
 def loop():
   # Trigger acquisition of one frame
@@ -50,7 +60,7 @@ def loop():
     print(f"Received {len(list_x)} points from line 4")
     # Print data for every point
     for idx, x_val in enumerate(list_x):
-      print(f"Point[{idx}]: X:{x_val} Y:{list_y[idx]} Z:{list_z[idx]} I:{list_i[idx]}")
+      print(f"Point[{idx:02d}]: X:{x_val:04d} mm Y:{list_y[idx]:04d} mm Z:{list_z[idx]:04d} mm I:{list_i[idx]}")
   else:
     print("No data received or timeout")
 

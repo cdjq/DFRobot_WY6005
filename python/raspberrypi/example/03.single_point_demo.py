@@ -31,15 +31,25 @@ except serial.SerialException as e:
 def setup():
   print("DFRobot_64x8DTOF init...")
 
-  # Configure to single frame mode
-  ret = dtof64x8.config_frame_mode(dtof64x8.FRAME_MODE_SINGLE)
-  print(f"Config Single Frame Mode: {'Success' if ret else 'Failed'}")
+  if not dtof64x8.begin():
+    print("Beginning sensor failed!")
+    sys.exit(1)
 
-  # Configure to single point mode (Line 4, Point 32)
-  ret = dtof64x8.config_measure_mode(4, 32)
-  print(f"Config Single Point Mode (Line 4, Point 32): {'Success' if ret else 'Failed'}")
+  # Configure to single frame mode (retry until success)
+  print("Configuring frame mode: Single Frame...")
+  while not dtof64x8.config_frame_mode(dtof64x8.FRAME_MODE_SINGLE):
+    print("Config Single Frame Mode failed, retrying...")
+    time.sleep(0.2)
+  print("Config Single Frame Mode: Success")
 
-  time.sleep(0.5)
+  # Configure to single point mode (Line 4, Point 32) (retry until success)
+  print("Configuring Single Point Mode (Line 4, Point 32)...")
+  while not dtof64x8.config_measure_mode(4, 32):
+    print("Config Single Point Mode failed, retrying...")
+    time.sleep(0.2)
+  print("Config Single Point Mode (Line 4, Point 32): Success")
+
+  time.sleep(2)
 
 def loop():
   # Trigger acquisition of one frame
@@ -49,7 +59,7 @@ def loop():
   if len(list_x) > 0:
     print(f"Received {len(list_x)} points")
     # In single point mode, should receive exactly 1 point
-    print(f"Point[0]: X:{list_x[0]} Y:{list_y[0]} Z:{list_z[0]} I:{list_i[0]}")
+    print(f"Point[00]: X:{list_x[0]:04d} mm Y:{list_y[0]:04d} mm Z:{list_z[0]:04d} mm I:{list_i[0]}")
   else:
     print("No data received or timeout")
 

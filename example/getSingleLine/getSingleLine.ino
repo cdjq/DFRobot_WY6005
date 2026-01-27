@@ -15,20 +15,25 @@ DFRobot_64x8DTOF dtof64x8(Serial1, SERIAL_8N1, 25, 26);
 void setup()
 {
   Serial.begin(115200);
-  dtof64x8.begin(921600);
-  // Configure single frame mode using new API
-  if (!dtof64x8.configFrameMode(DFRobot_64x8DTOF::eFrameSingle)) {
-    Serial.println("configFrameMode failed");
+  while(!Serial);
+  while(!dtof64x8.begin());
+  Serial.println("Configuring frame mode: Single Frame...");
+  while (!dtof64x8.configFrameMode(DFRobot_64x8DTOF::eFrameSingle)) {
+    Serial.println("configFrameMode failed, retrying...");
+    delay(200);
   }
+  Serial.println("Configuration successful.");
+  delay(300);
+  // Configure single line mode (retry until success)
   Serial.println("Configuring Single Line Mode...");
-  if (!dtof64x8.configMeasureMode(LINE_NUM)) {
-    Serial.println("Configuration failed!");
-  } else {
-    Serial.println("Configuration successful.");
-    Serial.print("Mode: Single Line (Line: ");
-    Serial.print(LINE_NUM);
-    Serial.println(")");
+  while (!dtof64x8.configMeasureMode(LINE_NUM)) {
+    Serial.println("Configuration failed, retrying...");
+    delay(200);
   }
+  Serial.println("Configuration successful.");
+  Serial.print("Mode: Single Line (Line: ");
+  Serial.print(LINE_NUM);
+  Serial.println(")");
   delay(300);
 }
 
@@ -41,9 +46,12 @@ void loop()
     Serial.print(parsed);
     Serial.println(" points:");
     for (int i = 0; i < parsed; i++) {
-      char buf[80];
-      sprintf(buf, "[%02d] x:%04dmm y:%04dmm z:%04dmm i:%04d", i, dtof64x8.point.xBuf[i], dtof64x8.point.yBuf[i], dtof64x8.point.zBuf[i], dtof64x8.point.iBuf[i]);
-      Serial.println(buf);
+      char numbuf[16];
+      Serial.print("["); if (i < 10) Serial.print("0"); Serial.print(i); Serial.print("]");
+      Serial.print(": X="); sprintf(numbuf, "%04d", dtof64x8.point.xBuf[i]); Serial.print(numbuf); Serial.print(" mm ");
+      Serial.print("Y="); sprintf(numbuf, "%04d", dtof64x8.point.yBuf[i]); Serial.print(numbuf); Serial.print(" mm ");
+      Serial.print("Z="); sprintf(numbuf, "%04d", dtof64x8.point.zBuf[i]); Serial.print(numbuf); Serial.print(" mm ");
+      Serial.print("I="); Serial.println(dtof64x8.point.iBuf[i]);
     }
   } else if (parsed == 0) {
     Serial.println(parsed);

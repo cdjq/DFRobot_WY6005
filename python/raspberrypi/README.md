@@ -8,7 +8,7 @@ The DFRobot 64x8DTOF is a high-precision 3D ToF (Time of Flight) sensor module p
 [64x8DTOF ToF Sensor](https://www.dfrobot.com/)
 
 ```text
-SKU: 64x8DTOF
+SKU: SEN0682
 ```
 
 ## Table of Contents
@@ -51,9 +51,20 @@ def config_measure_mode(self, *args):
     @n - no args -> full output (all points)
     @n - (line,) -> single line mode (line: 1..8)
     @n - (line, point) -> single point mode (line:1..8, point:1-64)
+    @n - (line, start_point, end_point) -> multi-point mode (line:1..8, start:1..64, end:1..64), configure a contiguous range of points on the same line
     @return bool: True on success, False on failure.
     @retval True Configuration successful
     @retval False Configuration failed
+    """
+
+def begin(self):
+    """Initialize the serial port and enable data streaming from the sensor.
+    @details
+    - Verifies the configured baud rate is 921600 (library default); returns False otherwise.
+    - Waits briefly (~0.4s) for the serial port to stabilize.
+    - Calls the internal method `_set_stream_control(True)` to enable data streaming on the device.
+    - Returns True if initialization and stream enable succeeded, False on failure.
+    @return bool: True on success, False on failure.
     """
 
 def get_data(self, timeout_ms=500):

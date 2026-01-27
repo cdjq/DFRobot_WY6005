@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 '''
-@file full_output_demo.py
-@brief Full output mode demo - Read all 8x64 points from DFRobot_64x8DTOF.
+@file multi_point_demo.py
+@brief Multi point mode demo - Read multiple points from a line (e.g. points 10-20 on line 4) from DFRobot_64x8DTOF.
 @copyright   Copyright (c) 2026 DFRobot Co.Ltd (http://www.dfrobot.com)
 @license     The MIT license (MIT)
 @author [PLELES] (https://github.com/PLELES)
@@ -42,15 +42,15 @@ def setup():
     time.sleep(0.2)
   print("Config Single Frame Mode: Success")
 
-  # Configure to full output mode (get all 64*8 points) (retry until success)
-  print("Configuring Full Output Mode...")
-  while not dtof64x8.config_measure_mode():
-    print("Config Full Output Mode failed, retrying...")
+  # Configure to multi point mode (Line 4, Points 10 to 20) (retry until success)
+  # Arguments: Line number (4), Start point (10), End point (20)
+  print("Configuring Multi Point Mode (Line 4, Points 10-20)...")
+  while not dtof64x8.config_measure_mode(4, 10, 20):
+    print("Config Multi Point Mode failed, retrying...")
     time.sleep(0.2)
-  print("Config Full Output Mode: Success")
+  print("Config Multi Point Mode (Line 4, Points 10-20): Success")
 
-  time.sleep(2)
-
+  time.sleep(0.5)
 
 def loop():
   # Trigger acquisition of one frame
@@ -59,9 +59,11 @@ def loop():
 
   if len(list_x) > 0:
     print(f"Received {len(list_x)} points")
-    # Print data for every point
+    # Print data for every point in the configured range
     for idx, x_val in enumerate(list_x):
-      print(f"Point[{idx:02d}]: X:{x_val:04d} mm Y:{list_y[idx]:04d} mm Z:{list_z[idx]:04d} mm I:{list_i[idx]}")
+      # Note: The index in list is relative to the result buffer (0..N-1)
+      # The actual point index on sensor would be 10 + idx
+      print(f"Index[{idx:02d}]: X:{x_val:04d} mm Y:{list_y[idx]:04d} mm Z:{list_z[idx]:04d} mm I:{list_i[idx]}")
   else:
     print("No data received or timeout")
 
