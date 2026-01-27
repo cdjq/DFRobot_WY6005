@@ -24,30 +24,30 @@ DFRobot_64x8DTOF::DFRobot_64x8DTOF(HardwareSerial& serial, uint32_t config, int8
 
 bool DFRobot_64x8DTOF::begin(uint32_t baudRate)
 {
-  // Not supported platforms: ESP8266 and AVR (UNO)
-  #if defined(ARDUINO_ARCH_ESP8266) || defined(ARDUINO_ARCH_AVR)
-    DBG("Error: platform not supported (ESP8266/AVRUNO)");
-    return false;
-  #endif
+// Not supported platforms: ESP8266 and AVR (UNO)
+#if defined(ARDUINO_ARCH_ESP8266) || defined(ARDUINO_ARCH_AVR)
+  DBG("Error: platform not supported (ESP8266/AVRUNO)");
+  return false;
+#endif
 
   if (baudRate != 921600) {
     DBG("Error: only 921600 baud rate is supported");
     return false;
   }
 
-  #if defined(ESP32)
-    _serial->begin(baudRate, _config, _rxPin, _txPin);
-  #else
-    // Fallback: try two-arg form first, otherwise single arg.
-  #if defined(HAVE_HWSERIAL1) || defined(SERIAL_8N1)
-    _serial->begin(baudRate, _config);
-  #else
-    _serial->begin(baudRate);
-  #endif
-  #endif
+#if defined(ESP32)
+  _serial->begin(baudRate, _config, _rxPin, _txPin);
+#else
+  // Fallback: try two-arg form first, otherwise single arg.
+#if defined(HAVE_HWSERIAL1) || defined(SERIAL_8N1)
+  _serial->begin(baudRate, _config);
+#else
+  _serial->begin(baudRate);
+#endif
+#endif
 
   delay(400);
- 
+
   // Try to enable stream on the sensor(3 times); if it fails, device likely not present/responding
   bool isConnected = false;
   for (int i = 0; i < 3; i++) {
@@ -67,7 +67,7 @@ bool DFRobot_64x8DTOF::begin(uint32_t baudRate)
 
 void DFRobot_64x8DTOF::clearBuffer(void)
 {
-  while(_serial->available()) _serial->read();
+  while (_serial->available()) _serial->read();
 }
 
 bool DFRobot_64x8DTOF::sendCommand(const String& command)
@@ -76,46 +76,46 @@ bool DFRobot_64x8DTOF::sendCommand(const String& command)
   clearBuffer();
   _serial->print(command);
   _serial->print("\n");
-  
-  uint32_t start = millis();
-  int frameIndex = 0;
-  while((millis() - start) < DTOF64X8_RESPONSE_TIMEOUT){
-     if(_serial->available()){
-        uint8_t c = _serial->read();
-        switch (frameIndex) {
-          case 0:
+
+  uint32_t start      = millis();
+  int      frameIndex = 0;
+  while ((millis() - start) < DTOF64X8_RESPONSE_TIMEOUT) {
+    if (_serial->available()) {
+      uint8_t c = _serial->read();
+      switch (frameIndex) {
+        case 0:
+          if (c == DTOF64X8_SYNC_BYTE_0)
+            frameIndex++;
+          break;
+        case 1:
+          if (c == DTOF64X8_SYNC_BYTE_1) {
+            frameIndex++;
+          } else {
+            frameIndex = 0;
             if (c == DTOF64X8_SYNC_BYTE_0)
               frameIndex++;
-            break;
-          case 1:
-            if (c == DTOF64X8_SYNC_BYTE_1) {
+          }
+          break;
+        case 2:
+          if (c == DTOF64X8_SYNC_BYTE_2) {
+            frameIndex++;
+          } else {
+            frameIndex = 0;
+            if (c == DTOF64X8_SYNC_BYTE_0)
               frameIndex++;
-            } else {
-              frameIndex = 0;
-              if (c == DTOF64X8_SYNC_BYTE_0)
-                frameIndex++;
-            }
-            break;
-          case 2:
-            if (c == DTOF64X8_SYNC_BYTE_2) {
+          }
+          break;
+        case 3:
+          if (c == DTOF64X8_SYNC_BYTE_3) {
+            return true;
+          } else {
+            frameIndex = 0;
+            if (c == DTOF64X8_SYNC_BYTE_0)
               frameIndex++;
-            } else {
-              frameIndex = 0;
-              if (c == DTOF64X8_SYNC_BYTE_0)
-                frameIndex++;
-            }
-            break;
-          case 3:
-            if (c == DTOF64X8_SYNC_BYTE_3) {
-              return true;
-            } else {
-              frameIndex = 0;
-              if (c == DTOF64X8_SYNC_BYTE_0)
-                frameIndex++;
-            }
-            break;
-        }
-     }
+          }
+          break;
+      }
+    }
   }
   return false;
 }
@@ -135,13 +135,17 @@ bool DFRobot_64x8DTOF::setFrameMode(bool continuousMode)
 bool DFRobot_64x8DTOF::setOutputLineData(uint8_t line, uint8_t startPoint, uint8_t endPoint)
 {
   // Validate line range (0 allowed for global/full configuration)
-  if (line > 8) return false;
-  
+  if (line > 8)
+    return false;
+
   if (line != 0) {
     // For per-line configuration, enforce 1..64 indexing for points
-    if (startPoint < 1 || startPoint > 64) return false;
-    if (endPoint < 1 || endPoint > 64) return false;
-    if (endPoint < startPoint) return false;
+    if (startPoint < 1 || startPoint > 64)
+      return false;
+    if (endPoint < 1 || endPoint > 64)
+      return false;
+    if (endPoint < startPoint)
+      return false;
   }
 
   String command = "AT+SPAD_OUTPUT_LINE_DATA=" + String(line) + "," + String(startPoint) + "," + String(endPoint);
@@ -162,10 +166,12 @@ bool DFRobot_64x8DTOF::saveConfig(void)
 
 bool DFRobot_64x8DTOF::configMeasureMode(uint8_t lineNum)
 {
-  if (!setStreamControl(false)) return false;
+  if (!setStreamControl(false))
+    return false;
   delay(700);
 
-  if(!setOutputLineData(lineNum, 1, 64)) return false;
+  if (!setOutputLineData(lineNum, 1, 64))
+    return false;
   _totalPoints = 64;
   DBG("Config: Single Line, Line: %d", lineNum);
   delay(700);
@@ -178,13 +184,14 @@ bool DFRobot_64x8DTOF::configMeasureMode(uint8_t lineNum)
   return setStreamControl(true);
 }
 
-
 bool DFRobot_64x8DTOF::configMeasureMode(uint8_t lineNum, uint8_t pointNum)
 {
-  if (!setStreamControl(false)) return false;
+  if (!setStreamControl(false))
+    return false;
   delay(700);
 
-  if (!setOutputLineData(lineNum, pointNum, pointNum)) return false;
+  if (!setOutputLineData(lineNum, pointNum, pointNum))
+    return false;
   _totalPoints = 1;
   DBG("Config: Single Point, Line: %d, Point: %d", lineNum, pointNum);
   delay(700);
@@ -193,15 +200,16 @@ bool DFRobot_64x8DTOF::configMeasureMode(uint8_t lineNum, uint8_t pointNum)
     DBG("Warning: saveConfig failed");
   }
   return setStreamControl(true);
-
 }
 
 bool DFRobot_64x8DTOF::configMeasureMode(uint8_t lineNum, uint8_t startPoint, uint8_t endPoint)
 {
-  if (!setStreamControl(false)) return false;
+  if (!setStreamControl(false))
+    return false;
   delay(700);
 
-  if (!setOutputLineData(lineNum, startPoint, endPoint)) return false;
+  if (!setOutputLineData(lineNum, startPoint, endPoint))
+    return false;
   _totalPoints = endPoint - startPoint + 1;
   DBG("Config: Multi Points, Line: %d, Start: %d, End: %d", lineNum, startPoint, endPoint);
   delay(700);
@@ -214,10 +222,12 @@ bool DFRobot_64x8DTOF::configMeasureMode(uint8_t lineNum, uint8_t startPoint, ui
 
 bool DFRobot_64x8DTOF::configMeasureMode(void)
 {
-  if (!setStreamControl(false)) return false;
+  if (!setStreamControl(false))
+    return false;
   delay(700);
 
-  if(!setOutputLineData(0, 0, 0)) return false;
+  if (!setOutputLineData(0, 0, 0))
+    return false;
   _totalPoints = DTOF64X8_MAX_POINTS;
   DBG("Config: Full Mode");
   delay(700);
@@ -227,7 +237,6 @@ bool DFRobot_64x8DTOF::configMeasureMode(void)
   }
   delay(700);
   return setStreamControl(true);
-
 }
 
 bool DFRobot_64x8DTOF::configFrameMode(eFrameMode_t mode)
@@ -236,12 +245,12 @@ bool DFRobot_64x8DTOF::configFrameMode(eFrameMode_t mode)
 
   if (!setStreamControl(false))
     return false;
-   delay(700);
+  delay(700);
   bool frameMode = ((mode == eFrameSingle) ? true : false);
 
   if (!setFrameMode(frameMode))
     return false;
-     delay(700);
+  delay(700);
   if (!saveConfig()) {
     DBG("Warning: saveConfig failed after configFrameMode");
   }
@@ -266,13 +275,14 @@ int DFRobot_64x8DTOF::getData(uint32_t timeoutMs)
   }
 
   uint32_t start = millis();
-  uint8_t pointBuf[DTOF64X8_POINT_DATA_SIZE];
-  
+  uint8_t  pointBuf[DTOF64X8_POINT_DATA_SIZE];
+
   for (int i = 0; i < points; i++) {
     int byteCount = 0;
     while (byteCount < DTOF64X8_POINT_DATA_SIZE) {
-      if ((millis() - start) > timeoutMs) return -1; 
-      
+      if ((millis() - start) > timeoutMs)
+        return -1;
+
       if (_serial->available()) {
         pointBuf[byteCount++] = _serial->read();
       }
@@ -280,6 +290,6 @@ int DFRobot_64x8DTOF::getData(uint32_t timeoutMs)
 
     parsePointData(pointBuf, &point.xBuf[i], &point.yBuf[i], &point.zBuf[i], &point.iBuf[i]);
   }
-  
+
   return points;
 }

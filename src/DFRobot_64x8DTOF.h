@@ -143,7 +143,7 @@ public:
    * @enum eMeasureMode_t
    * @brief Measurement output mode: single point / single line / full output
    */
-   typedef enum {
+  typedef enum {
     eMeasureModeSinglePoint = 0, /*!< Single point output (provide line and point) */
     eMeasureModeSingleLine  = 1, /*!< Single line output (provide line only) */
     eMeasureModeFull        = 2  /*!< Full output (all points) */
@@ -178,7 +178,7 @@ public:
     * @note On ESP8266 and AVR (UNO) platforms this function currently returns false (platform not supported).
     * @note The function will attempt to enable stream control on the device to verify presence.
    */
-    bool begin(uint32_t baudRate = 921600);
+  bool begin(uint32_t baudRate = 921600);
 
   /**
    * @fn getPointData

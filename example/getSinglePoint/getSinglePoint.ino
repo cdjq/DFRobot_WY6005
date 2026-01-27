@@ -19,10 +19,10 @@ DFRobot_64x8DTOF dtof64x8(Serial1, SERIAL_8N1, 25, 26);
 void setup()
 {
   Serial.begin(115200);
-  while(!Serial);
-  while(!dtof64x8.begin());
+  while (!Serial);
+  while (!dtof64x8.begin());
   Serial.println("WY6005 Single Point Demo");
-  
+
   // Retry configuring frame mode until success
   Serial.println("Configuring frame mode: Single Frame...");
   while (!dtof64x8.configFrameMode(DFRobot_64x8DTOF::eFrameSingle)) {
@@ -50,16 +50,25 @@ void loop()
   if (parsed > 0) {
     char numbuf[16];
     Serial.print("Point Data -> ");
-    Serial.print("X: "); sprintf(numbuf, "%04d", dtof64x8.point.xBuf[0]); Serial.print(numbuf); Serial.print(" mm, ");
-    Serial.print("Y: "); sprintf(numbuf, "%04d", dtof64x8.point.yBuf[0]); Serial.print(numbuf); Serial.print(" mm, ");
-    Serial.print("Z: "); sprintf(numbuf, "%04d", dtof64x8.point.zBuf[0]); Serial.print(numbuf); Serial.print(" mm, ");
-    Serial.print("I: "); Serial.println(dtof64x8.point.iBuf[0]); 
-  } else if (parsed == -1){
+    Serial.print("X: ");
+    sprintf(numbuf, "%04d", dtof64x8.point.xBuf[0]);
+    Serial.print(numbuf);
+    Serial.print(" mm, ");
+    Serial.print("Y: ");
+    sprintf(numbuf, "%04d", dtof64x8.point.yBuf[0]);
+    Serial.print(numbuf);
+    Serial.print(" mm, ");
+    Serial.print("Z: ");
+    sprintf(numbuf, "%04d", dtof64x8.point.zBuf[0]);
+    Serial.print(numbuf);
+    Serial.print(" mm, ");
+    Serial.print("I: ");
+    Serial.println(dtof64x8.point.iBuf[0]);
+  } else if (parsed == -1) {
     Serial.println("Read timeout");
-  } else if (parsed == -2){
+  } else if (parsed == -2) {
     Serial.println("Error Out of databuf");
   }
-  
 
   delay(500);
 }

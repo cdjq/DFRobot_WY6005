@@ -12,17 +12,20 @@
 #include "DFRobot_64x8DTOF.h"
 
 // Configure demo: line and point range
-#define DTOF_LINE 4
+#define DTOF_LINE        4
 #define DTOF_START_POINT 1
-#define DTOF_END_POINT 10
+#define DTOF_END_POINT   10
 
 // Use Serial1 for device communication on boards that support it
 DFRobot_64x8DTOF dtof64x8(Serial1, SERIAL_8N1, 25, 26);
 
-void setup() {
+void setup()
+{
   Serial.begin(115200);
-  while(!Serial) { delay(10); }
-  while(!dtof64x8.begin());
+  while (!Serial) {
+    delay(10);
+  }
+  while (!dtof64x8.begin());
 
   Serial.println("DFRobot 64x8DTOF Multi-Point Demo");
   // Also demonstrate configuring single-frame mode (retry until success)
@@ -48,7 +51,8 @@ void setup() {
   delay(300);
 }
 
-void loop() {
+void loop()
+{
   int cnt = dtof64x8.getData(300);
   if (cnt > 0) {
     Serial.print("Got points: ");
@@ -56,10 +60,20 @@ void loop() {
     for (int i = 0; i < cnt; i++) {
       char numbuf[16];
       Serial.print(DTOF_START_POINT + i);
-      Serial.print(": X="); sprintf(numbuf, "%04d", dtof64x8.point.xBuf[i]); Serial.print(numbuf); Serial.print(" mm");
-      Serial.print(" Y="); sprintf(numbuf, "%04d", dtof64x8.point.yBuf[i]); Serial.print(numbuf); Serial.print(" mm");
-      Serial.print(" Z="); sprintf(numbuf, "%04d", dtof64x8.point.zBuf[i]); Serial.print(numbuf); Serial.print(" mm");
-      Serial.print(" I="); Serial.println(dtof64x8.point.iBuf[i]);
+      Serial.print(": X=");
+      sprintf(numbuf, "%04d", dtof64x8.point.xBuf[i]);
+      Serial.print(numbuf);
+      Serial.print(" mm");
+      Serial.print(" Y=");
+      sprintf(numbuf, "%04d", dtof64x8.point.yBuf[i]);
+      Serial.print(numbuf);
+      Serial.print(" mm");
+      Serial.print(" Z=");
+      sprintf(numbuf, "%04d", dtof64x8.point.zBuf[i]);
+      Serial.print(numbuf);
+      Serial.print(" mm");
+      Serial.print(" I=");
+      Serial.println(dtof64x8.point.iBuf[i]);
     }
   } else {
     Serial.println("getData timeout or error");
